@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Local Dev Manager</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- xterm.css loaded dynamically by xterm-loader.js -->
+</head>
+<body>
+
+<div class="titlebar">
+  <span>Local Dev Manager</span>
+  <div class="titlebar-actions">
+    <button class="titlebar-btn" id="btn-view-projects" style="background:var(--accent);border-color:var(--accent);color:#fff;">Projects</button>
+    <button class="titlebar-btn" id="btn-view-logs">All Logs</button>
+    <button class="titlebar-btn" id="btn-view-ports">Ports</button>
+    <button class="titlebar-btn" id="btn-view-syslog">System</button>
+    <button class="titlebar-btn" id="btn-settings" style="font-size:14px;padding:2px 8px;">⚙</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Projects</h2>
+      <div class="sidebar-btns">
+        <button class="btn-sm" id="btn-add" title="+">+</button>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="sidebar-action-btn start-all" id="btn-start-all">Start All</button>
+      <button class="sidebar-action-btn stop-all" id="btn-stop-all">Stop All</button>
+    </div>
+    <div style="padding:8px 12px 4px;">
+      <input type="text" id="project-search" placeholder="Search projects..." style="width:100%;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;outline:none;" />
+    </div>
+    <div class="profiles-section" id="profiles-section"></div>
+    <div class="project-list" id="project-list"></div>
+  </div>
+
+  <div class="main" id="main-panel">
+    <div class="empty-state" id="empty-state">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style="opacity:0.6;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12h6M12 9v6"/></svg>
+      <h2 style="font-size:20px;color:var(--text);margin-top:4px;">Welcome to Local Dev Manager</h2>
+      <p style="font-size:13px;max-width:340px;text-align:center;line-height:1.5;">Manage all your local dev projects in one place. Start, stop, and monitor them with a single click.</p>
+      <button class="btn btn-start" id="btn-onboard-add" style="margin-top:8px;padding:10px 24px;font-size:13px;">Add Your First Project</button>
+      <p style="font-size:11px;margin-top:12px;">Or press <kbd style="padding:2px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:10px;">⌘N</kbd></p>
+    </div>
+    <div class="project-detail" id="project-detail" style="display:none;"></div>
+    <div class="ports-panel" id="ports-panel" style="display:none;"></div>
+    <div class="syslog-panel" id="syslog-panel" style="display:none;">
+      <div class="syslog-header">
+        <span>System Logs</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select class="syslog-filter" id="syslog-level-filter">
+            <option value="all">All levels</option>
+            <option value="error">Errors only</option>
+            <option value="warn">Warnings</option>
+            <option value="info">Info</option>
+          </select>
+          <input class="log-search" id="syslog-search" placeholder="Filter..." />
+          <button class="btn btn-edit" id="btn-clear-syslog" style="padding:4px 10px;font-size:10px;">Clear</button>
+        </div>
+      </div>
+      <div class="syslog-viewer" id="syslog-viewer"></div>
+    </div>
+    <div class="unified-logs-panel" id="unified-logs-panel" style="display:none;">
+      <div class="log-header">
+        <span>All Project Logs</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input class="log-search" id="unified-log-search" placeholder="Filter all logs..." />
+          <button class="btn btn-edit" id="btn-clear-unified-logs" style="padding:4px 10px;font-size:10px;">Clear</button>
+        </div>
+      </div>
+      <div class="log-viewer" id="unified-log-viewer" style="flex:1;margin:0 16px 16px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Project Modal -->
+<div class="modal-overlay" id="modal" style="display:none;">
+  <div class="modal">
+    <h2 id="modal-title">Add Project</h2>
+    <div class="form-group">
+      <label>Project Name</label>
+      <input type="text" id="input-name" placeholder="My API Server" />
+    </div>
+    <div class="form-group">
+      <label>Directory Path</label>
+      <div class="path-row">
+        <input type="text" id="input-path" placeholder="/Users/you/projects/api" />
+        <button class="btn-browse" id="btn-browse">Browse</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Commands</label>
+      <div id="commands-list"></div>
+      <button class="btn-browse" id="btn-add-cmd" style="margin-top:6px;font-size:11px;">+ Add command</button>
+      <div class="form-hint" id="detect-hint">e.g. npm start, python manage.py runserver, docker compose up</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 80px;">
+        <label>Icon</label>
+        <input type="text" id="input-icon" placeholder="🚀" style="font-size:24px;text-align:center;padding:6px;" maxlength="2" />
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label>URL (optional)</label>
+        <input type="text" id="input-url" placeholder="http://localhost:3000" />
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <div class="color-picker" id="color-picker">
+          <div class="color-swatch" data-color="" style="background:var(--text-dim);width:20px;height:20px;"></div>
+          <div class="color-swatch" data-color="#e17055" style="background:#e17055;width:20px;height:20px;"></div>
+          <div class="color-swatch" data-color="#fdcb6e" style="background:#fdcb6e;width:20px;height:20px;"></div>
+          <div class="color-swatch" data-color="#00b894" style="background:#00b894;width:20px;height:20px;"></div>
+          <div class="color-swatch" data-color="#74b9ff" style="background:#74b9ff;width:20px;height:20px;"></div>
+          <div class="color-swatch" data-color="#a29bfe" style="background:#a29bfe;width:20px;height:20px;"></div>
+          <div class="color-swatch" data-color="#fd79a8" style="background:#fd79a8;width:20px;height:20px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="toggle-row">
+        <label style="margin-bottom:0;">Auto-restart on crash</label>
+        <div class="toggle" id="toggle-autorestart"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Environment Variables</label>
+      <textarea class="env-textarea" id="input-env" placeholder="KEY=value&#10;ANOTHER=value"></textarea>
+      <div class="form-hint">One per line, KEY=value format. Applied on top of system env.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-cancel">Cancel</button>
+      <button class="btn-save" id="btn-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profile-modal" style="display:none;">
+  <div class="modal" style="width:380px;">
+    <h2 id="profile-modal-title">Save Profile</h2>
+    <div class="form-group">
+      <label>Profile Name</label>
+      <input type="text" id="profile-name" placeholder="Full Stack" />
+    </div>
+    <div class="form-group">
+      <label>Select projects to include</label>
+      <div id="profile-project-list"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="profile-cancel">Cancel</button>
+      <button class="btn-save" id="profile-save">Save Profile</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settings-modal" style="display:none;">
+  <div class="modal" style="width:400px;">
+    <h2>Settings</h2>
+    <div class="form-group">
+      <label>Theme</label>
+      <select id="settings-theme" style="width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;">
+        <option value="system">System (follow device)</option>
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Terminal App (macOS)</label>
+      <select id="settings-terminal" style="width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;">
+        <option value="Terminal">Terminal</option>
+        <option value="iTerm">iTerm</option>
+        <option value="Warp">Warp</option>
+        <option value="Alacritty">Alacritty</option>
+        <option value="Kitty">Kitty</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Notifications</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;">
+        <input type="checkbox" id="settings-notification-sound" style="width:15px;height:15px;cursor:pointer;">
+        Play sound with notifications
+      </label>
+    </div>
+    <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
+      <label>Data</label>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-browse" id="settings-export" style="flex:1;text-align:center;">Export Config</button>
+        <button class="btn-browse" id="settings-import" style="flex:1;text-align:center;">Import Config</button>
+      </div>
+      <div class="form-hint">Export or import all your projects, profiles, and settings as JSON.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="settings-cancel">Cancel</button>
+      <button class="btn-save" id="settings-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="xterm-loader.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>
