@@ -406,7 +406,8 @@
     // Port conflict check
     checkPortConflicts();
 
-    document.getElementById('btn-toggle').addEventListener('click', async () => {
+    const btnToggle = document.getElementById('btn-toggle');
+    if (btnToggle) btnToggle.addEventListener('click', async () => {
       if (isRunning) { await window.api.stopProject(p.id); }
       else { logBuffers[p.id] = []; if (viewer) viewer.textContent = ''; await window.api.startProject(p); }
     });
@@ -1830,6 +1831,14 @@
   function openModal(project = null) {
     editingId = project ? project.id : null;
     document.getElementById('modal-title').textContent = project ? 'Edit Project' : 'Add Project';
+    // Show mode tabs only when adding, not editing
+    document.getElementById('modal-mode-tabs').style.display = project ? 'none' : '';
+    setModalMode('existing');
+    // Reset clone/scaffold fields
+    ['clone-url','clone-dest','clone-cmd','scaffold-name','scaffold-dest'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    ['clone-status','scaffold-status'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    document.getElementById('btn-clone').disabled = false; document.getElementById('btn-clone').textContent = 'Clone & Add';
+    document.getElementById('btn-scaffold').disabled = false; document.getElementById('btn-scaffold').textContent = 'Create & Add';
     document.getElementById('input-name').value = project ? project.name : '';
     document.getElementById('input-path').value = project ? project.path : '';
     document.getElementById('input-url').value = project ? (project.url || '') : '';
@@ -1918,6 +1927,90 @@
   document.getElementById('btn-cancel').addEventListener('click', closeModal);
   document.getElementById('btn-save').addEventListener('click', saveModal);
   document.getElementById('btn-add-cmd').addEventListener('click', () => { modalCommands.push({ label: '', cmd: '', cwd: '' }); renderCommandRows(); });
+
+  // ── Modal mode tabs ──────────────────────────────────────────────
+  let currentModalMode = 'existing';
+  function setModalMode(mode) {
+    currentModalMode = mode;
+    document.querySelectorAll('.modal-mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+    document.getElementById('modal-existing-section').style.display = mode === 'existing' ? '' : 'none';
+    document.getElementById('modal-clone-section').style.display   = mode === 'clone'    ? '' : 'none';
+    document.getElementById('modal-scaffold-section').style.display = mode === 'scaffold' ? '' : 'none';
+  }
+  document.querySelectorAll('.modal-mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => setModalMode(tab.dataset.mode));
+  });
+
+  // ── Clone mode ───────────────────────────────────────────────────
+  document.getElementById('btn-cancel-clone').addEventListener('click', closeModal);
+  document.getElementById('btn-browse-clone').addEventListener('click', async () => {
+    const folder = await window.api.pickFolder();
+    if (folder) document.getElementById('clone-dest').value = folder;
+  });
+  document.getElementById('btn-clone').addEventListener('click', async () => {
+    const url  = document.getElementById('clone-url').value.trim();
+    const dest = document.getElementById('clone-dest').value.trim();
+    const cmd  = document.getElementById('clone-cmd').value.trim();
+    if (!url || !dest) return;
+    const btn = document.getElementById('btn-clone');
+    const status = document.getElementById('clone-status');
+    btn.disabled = true; btn.textContent = 'Cloning...';
+    status.style.display = ''; status.className = 'clone-status'; status.textContent = `Cloning ${url}...`;
+    const result = await window.api.gitClone(url, dest);
+    if (result.error) {
+      status.className = 'clone-status error'; status.textContent = result.error;
+      btn.disabled = false; btn.textContent = 'Clone & Add';
+      return;
+    }
+    status.className = 'clone-status success'; status.textContent = `Cloned into ${result.path}`;
+    // Auto-detect and add as project
+    const detected = await window.api.detectProject(result.path);
+    const name = result.name;
+    const commands = cmd ? [{ label: 'main', cmd, cwd: result.path }]
+      : (detected && detected.commands && detected.commands.length > 0 ? detected.commands.map(c => ({ ...c, cwd: result.path })) : []);
+    const command = commands.length > 0 ? commands[0].cmd : '';
+    const newProject = { id: crypto.randomUUID(), name, path: result.path, command, commands, url: '', color: '', autoRestart: false, envVars: '' };
+    projects.push(newProject);
+    await window.api.saveProjects(projects);
+    closeModal(); renderSidebar(); selectProject(newProject.id);
+  });
+
+  // ── Scaffold mode ────────────────────────────────────────────────
+  let selectedTpl = 'vite-react';
+  document.querySelectorAll('.scaffold-tpl').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedTpl = btn.dataset.tpl;
+      document.querySelectorAll('.scaffold-tpl').forEach(b => b.classList.toggle('active', b.dataset.tpl === selectedTpl));
+    });
+  });
+  document.getElementById('btn-cancel-scaffold').addEventListener('click', closeModal);
+  document.getElementById('btn-browse-scaffold').addEventListener('click', async () => {
+    const folder = await window.api.pickFolder();
+    if (folder) document.getElementById('scaffold-dest').value = folder;
+  });
+  document.getElementById('btn-scaffold').addEventListener('click', async () => {
+    const name = document.getElementById('scaffold-name').value.trim();
+    const dest = document.getElementById('scaffold-dest').value.trim();
+    if (!name || !dest) return;
+    const btn = document.getElementById('btn-scaffold');
+    const status = document.getElementById('scaffold-status');
+    btn.disabled = true; btn.textContent = 'Creating...';
+    status.style.display = ''; status.className = 'clone-status'; status.textContent = `Scaffolding ${name}...`;
+    const result = await window.api.scaffoldProject(selectedTpl, name, dest);
+    if (result.error) {
+      status.className = 'clone-status error'; status.textContent = result.error;
+      btn.disabled = false; btn.textContent = 'Create & Add';
+      return;
+    }
+    status.className = 'clone-status success'; status.textContent = `Created at ${result.path}`;
+    const tplCmds = { 'vite-react': 'npm run dev', 'nextjs': 'npm run dev', 'node': 'node index.js', 'python': 'python3 main.py', 'go': 'go run .' };
+    const command = tplCmds[selectedTpl] || '';
+    const commands = command ? [{ label: 'main', cmd: command, cwd: result.path }] : [];
+    const newProject = { id: crypto.randomUUID(), name, path: result.path, command, commands, url: '', color: '', autoRestart: false, envVars: '' };
+    projects.push(newProject);
+    await window.api.saveProjects(projects);
+    closeModal(); renderSidebar(); selectProject(newProject.id);
+  });
 
   document.getElementById('toggle-autorestart').addEventListener('click', (e) => {
     autoRestart = !autoRestart;

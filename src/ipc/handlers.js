@@ -225,6 +225,76 @@ function registerAll() {
     }
   });
 
+  // ── Project creation ─────────────────────────────────────────────
+  ipcMain.handle('git-clone', async (_e, url, dest) => {
+    try {
+      if (!fs.existsSync(dest)) return { error: `Destination does not exist: ${dest}` };
+      const repoName = url.replace(/\.git$/, '').split('/').pop() || 'repo';
+      const targetPath = path.join(dest, repoName);
+      // Run via a login shell so git inherits the full user environment —
+      // SSH agent, credential helpers, PATH — exactly like a terminal would.
+      const { spawn } = require('child_process');
+      const shell = process.env.SHELL || '/bin/zsh';
+      const cmd = `git clone ${JSON.stringify(url)} ${JSON.stringify(targetPath)}`;
+      await new Promise((resolve, reject) => {
+        const proc = spawn(shell, ['-l', '-c', cmd], {
+          env: process.env,
+          stdio: ['ignore', 'pipe', 'pipe']
+        });
+        let stderr = '';
+        proc.stderr.on('data', d => { stderr += d.toString(); });
+        proc.on('close', code => {
+          if (code === 0) resolve();
+          else reject(new Error(stderr.trim()));
+        });
+        setTimeout(() => { proc.kill(); reject(new Error('Clone timed out after 2 minutes')); }, 120000);
+      });
+      return { path: targetPath, name: repoName };
+    } catch (e) {
+      const lines = e.message.split('\n').filter(Boolean);
+      return { error: lines.slice(0, 3).join(' ') };
+    }
+  });
+
+  ipcMain.handle('scaffold-project', async (_e, tpl, name, dest) => {
+    try {
+      if (!fs.existsSync(dest)) return { error: `Destination does not exist: ${dest}` };
+      const targetPath = path.join(dest, name);
+      const env = { ...process.env, npm_config_yes: 'true' };
+
+      const cmds = {
+        'vite-react': `npm create vite@latest "${name}" -- --template react`,
+        'nextjs':     `npx create-next-app@latest "${name}" --yes`,
+        'node':       null, // manual setup
+        'python':     null,
+        'go':         null,
+      };
+
+      if (tpl === 'node') {
+        fs.mkdirSync(targetPath, { recursive: true });
+        fs.writeFileSync(path.join(targetPath, 'index.js'), '// Entry point\nconsole.log("Hello!");\n');
+        fs.writeFileSync(path.join(targetPath, 'package.json'), JSON.stringify({ name, version: '1.0.0', main: 'index.js', scripts: { start: 'node index.js' } }, null, 2));
+      } else if (tpl === 'python') {
+        fs.mkdirSync(targetPath, { recursive: true });
+        fs.writeFileSync(path.join(targetPath, 'main.py'), '# Entry point\nprint("Hello!")\n');
+        fs.writeFileSync(path.join(targetPath, 'requirements.txt'), '');
+        execSync(`python3 -m venv "${path.join(targetPath, 'venv')}"`, { encoding: 'utf-8', timeout: 30000, env });
+      } else if (tpl === 'go') {
+        fs.mkdirSync(targetPath, { recursive: true });
+        execSync(`go mod init ${name}`, { cwd: targetPath, encoding: 'utf-8', timeout: 15000, env });
+        fs.writeFileSync(path.join(targetPath, 'main.go'), `package main\n\nimport "fmt"\n\nfunc main() {\n\tfmt.Println("Hello!")\n}\n`);
+      } else {
+        const cmd = cmds[tpl];
+        if (!cmd) return { error: `Unknown template: ${tpl}` };
+        execSync(cmd, { cwd: dest, encoding: 'utf-8', timeout: 120000, env });
+      }
+
+      return { path: targetPath, name };
+    } catch (e) {
+      return { error: e.message.split('\n').slice(0, 3).join(' ') };
+    }
+  });
+
   ipcMain.handle('git-init', async (_e, cwd) => {
     try {
       execSync('git init', { cwd, encoding: 'utf-8', timeout: 10000, env: process.env });

@@ -82,6 +82,71 @@
 <div class="modal-overlay" id="modal" style="display:none;">
   <div class="modal">
     <h2 id="modal-title">Add Project</h2>
+
+    <!-- Mode tabs — only shown when adding, not editing -->
+    <div class="modal-mode-tabs" id="modal-mode-tabs">
+      <button class="modal-mode-tab active" data-mode="existing">Existing</button>
+      <button class="modal-mode-tab" data-mode="clone">Clone Repo</button>
+      <button class="modal-mode-tab" data-mode="scaffold">New Project</button>
+    </div>
+
+    <!-- Clone mode -->
+    <div id="modal-clone-section" style="display:none;">
+      <div class="form-group">
+        <label>Repository URL</label>
+        <input type="text" id="clone-url" placeholder="https://github.com/user/repo.git" />
+      </div>
+      <div class="form-group">
+        <label>Clone Into</label>
+        <div class="path-row">
+          <input type="text" id="clone-dest" placeholder="/Users/you/projects" />
+          <button class="btn-browse" id="btn-browse-clone">Browse</button>
+        </div>
+        <div class="form-hint">The repo folder will be created inside this directory.</div>
+      </div>
+      <div class="form-group">
+        <label>Start Command <span style="opacity:0.5;font-weight:normal;">(optional — set after cloning)</span></label>
+        <input type="text" id="clone-cmd" placeholder="npm run dev" />
+      </div>
+      <div id="clone-status" style="display:none;" class="clone-status"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btn-cancel-clone">Cancel</button>
+        <button class="btn-save" id="btn-clone">Clone & Add</button>
+      </div>
+    </div>
+
+    <!-- Scaffold mode -->
+    <div id="modal-scaffold-section" style="display:none;">
+      <div class="form-group">
+        <label>Template</label>
+        <div class="scaffold-templates" id="scaffold-templates">
+          <button class="scaffold-tpl active" data-tpl="vite-react">⚛ React (Vite)</button>
+          <button class="scaffold-tpl" data-tpl="nextjs">▲ Next.js</button>
+          <button class="scaffold-tpl" data-tpl="node">⬡ Node</button>
+          <button class="scaffold-tpl" data-tpl="python">🐍 Python</button>
+          <button class="scaffold-tpl" data-tpl="go">🐹 Go</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" id="scaffold-name" placeholder="my-project" />
+      </div>
+      <div class="form-group">
+        <label>Create In</label>
+        <div class="path-row">
+          <input type="text" id="scaffold-dest" placeholder="/Users/you/projects" />
+          <button class="btn-browse" id="btn-browse-scaffold">Browse</button>
+        </div>
+      </div>
+      <div id="scaffold-status" style="display:none;" class="clone-status"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btn-cancel-scaffold">Cancel</button>
+        <button class="btn-save" id="btn-scaffold">Create & Add</button>
+      </div>
+    </div>
+
+    <!-- Existing project form -->
+    <div id="modal-existing-section">
     <div class="form-group">
       <label>Project Name</label>
       <input type="text" id="input-name" placeholder="My API Server" />
@@ -136,6 +201,7 @@
       <button class="btn-cancel" id="btn-cancel">Cancel</button>
       <button class="btn-save" id="btn-save">Save</button>
     </div>
+    </div> <!-- end modal-existing-section -->
   </div>
 </div>
 

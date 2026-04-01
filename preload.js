@@ -72,6 +72,10 @@ contextBridge.exposeInMainWorld('api', {
   checkEnvVersions: (projectPath) => ipcRenderer.invoke('check-env-versions', projectPath),
   runEnvFix: (projectPath, cmd) => ipcRenderer.invoke('run-env-fix', projectPath, cmd),
 
+  // Project creation
+  gitClone: (url, dest) => ipcRenderer.invoke('git-clone', url, dest),
+  scaffoldProject: (tpl, name, dest) => ipcRenderer.invoke('scaffold-project', tpl, name, dest),
+
   // App logs
   getAppLogs: () => ipcRenderer.invoke('get-app-logs'),
   clearAppLogs: () => ipcRenderer.invoke('clear-app-logs'),
