@@ -267,6 +267,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .term-tab-add { color: var(--text-dim); font-size: 13px; padding: 4px 8px; }
 .term-tab-add:hover { color: var(--green); background: rgba(255,255,255,0.08); }
 
+/* Terminal search bar */
+.terminal-search-bar { display: flex; align-items: center; gap: 6px; padding: 5px 12px; background: #1e1e2e; margin: 0; border-bottom: 1px solid var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+.terminal-search-bar input { flex: 1; background: #2a2a3e; border: 1px solid #444; color: var(--text); font-size: 12px; font-family: 'SF Mono', Monaco, monospace; padding: 4px 8px; border-radius: 4px; outline: none; min-width: 0; }
+.terminal-search-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(108,92,231,0.25); }
+.terminal-search-bar input::placeholder { color: #666; }
+.terminal-search-count { color: #aaa; font-size: 11px; white-space: nowrap; }
+.terminal-search-bar button { background: #2a2a3e; border: 1px solid #444; color: #ccc; cursor: pointer; font-size: 10px; padding: 3px 7px; border-radius: 4px; line-height: 1; }
+.terminal-search-bar button:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
+
 /* Terminal container */
 .terminal-container { flex: 1; padding: 8px; background: #0a0a0a; margin: 0 16px 16px; border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm); overflow: hidden; }
 .terminal-container .xterm { height: 100%; }
