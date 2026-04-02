@@ -51,6 +51,11 @@
       await loadScript(`${localBase}/addon-web-links/lib/addon-web-links.js`).catch(() =>
         loadScript(`${cdnBase}/@xterm/addon-web-links@0.11.0/lib/addon-web-links.js`)
       );
+
+      // Load search addon
+      await loadScript(`${localBase}/addon-search/lib/addon-search.js`).catch(() =>
+        loadScript(`${cdnBase}/@xterm/addon-search@0.15.0/lib/addon-search.js`)
+      );
     }
 
     // Store promise for renderer to await

@@ -328,6 +328,13 @@
       </div>
       <div class="tab-content" id="tab-content-terminal" style="display:${activeDetailTab === 'terminal' ? 'flex' : 'none'};">
         <div class="terminal-tabs-bar" id="terminal-tabs-bar"></div>
+        <div class="terminal-search-bar" id="terminal-search-bar" style="display:none;">
+          <input type="text" id="terminal-search-input" placeholder="Find in terminal..." spellcheck="false" />
+          <span class="terminal-search-count" id="terminal-search-count"></span>
+          <button id="terminal-search-prev" title="Previous (Shift+Enter)">&#x25B2;</button>
+          <button id="terminal-search-next" title="Next (Enter)">&#x25BC;</button>
+          <button id="terminal-search-close" title="Close (Esc)">&times;</button>
+        </div>
         <div class="terminal-container" id="terminal-container"></div>
       </div>
       <div class="tab-content" id="tab-content-scripts" style="display:${activeDetailTab === 'scripts' ? 'flex' : 'none'};">
@@ -570,10 +577,21 @@
   }
 
   // ── Interactive Terminal (xterm.js) — Multi-tab ──────────────────
+  let terminalFontSize = 13;
+
+  function applyTerminalFontSize() {
+    Object.values(activeTerminals).forEach(({ term, fitAddon, _mounted }) => {
+      if (term && _mounted) {
+        term.options.fontSize = terminalFontSize;
+        try { fitAddon.fit(); } catch (_) {}
+      }
+    });
+  }
+
   function makeTerminalInstance() {
     return new Terminal({
       cursorBlink: true,
-      fontSize: 13,
+      fontSize: terminalFontSize,
       fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
       theme: {
         background: '#0a0a0a', foreground: '#cccccc', cursor: '#6c5ce7',
@@ -706,6 +724,15 @@
     term.open(container);
     requestAnimationFrame(() => { fitAddon.fit(); term.focus(); });
 
+    // Search addon
+    let searchAddon = null;
+    if (typeof SearchAddon !== 'undefined') {
+      try {
+        searchAddon = new SearchAddon.SearchAddon();
+        term.loadAddon(searchAddon);
+      } catch (_) {}
+    }
+
     // Clickable links — Cmd+click (Mac) or Ctrl+click opens in default browser
     if (typeof WebLinksAddon !== 'undefined') {
       try {
@@ -751,7 +778,7 @@
     const result = await window.api.createTerminal(terminalId, project.id, project.path);
     if (result && result.error) {
       term.writeln(`\r\n\x1b[31m${result.error}\x1b[0m`);
-      activeTerminals[terminalId] = { term, fitAddon, projectId: project.id, _mounted: true };
+      activeTerminals[terminalId] = { term, fitAddon, searchAddon, projectId: project.id, _mounted: true };
       return;
     }
 
@@ -759,6 +786,53 @@
       term.write(result.buffer);
     }
 
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== 'keydown') return true;
+      const meta = e.metaKey || e.ctrlKey;
+
+      // Shift+Enter → soft newline
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        window.api.writeTerminal(terminalId, '\n');
+        return false;
+      }
+
+      // ⌘F → open terminal search
+      if (meta && e.key === 'f') {
+        e.preventDefault();
+        openTerminalSearch();
+        return false;
+      }
+
+      // ⌘K → clear scrollback
+      if (meta && e.key === 'k') {
+        e.preventDefault();
+        term.clear();
+        return false;
+      }
+
+      // ⌘+/⌘-/⌘0 → font zoom
+      if (meta && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        terminalFontSize = Math.min(terminalFontSize + 1, 24);
+        applyTerminalFontSize();
+        return false;
+      }
+      if (meta && e.key === '-') {
+        e.preventDefault();
+        terminalFontSize = Math.max(terminalFontSize - 1, 8);
+        applyTerminalFontSize();
+        return false;
+      }
+      if (meta && e.key === '0') {
+        e.preventDefault();
+        terminalFontSize = 13;
+        applyTerminalFontSize();
+        return false;
+      }
+
+      return true;
+    });
     term.onData((data) => { window.api.writeTerminal(terminalId, data); });
     term.onResize(({ cols, rows }) => { window.api.resizeTerminal(terminalId, cols, rows); });
     window.api.resizeTerminal(terminalId, term.cols, term.rows);
@@ -770,7 +844,7 @@
     });
     resizeObserver.observe(container);
 
-    activeTerminals[terminalId] = { term, fitAddon, resizeObserver, projectId: project.id, _mounted: true };
+    activeTerminals[terminalId] = { term, fitAddon, searchAddon, resizeObserver, projectId: project.id, _mounted: true };
   }
 
   async function initTerminal(project) {
@@ -778,6 +852,86 @@
     renderTerminalTabsBar(project);
     await mountTerminal(project, state.activeTab);
   }
+
+  // ── Terminal Search ──────────────────────────────────────────────
+  function getActiveSearchAddon() {
+    if (!selectedId) return null;
+    const state = projectTerminalTabs[selectedId];
+    if (!state) return null;
+    const entry = activeTerminals[state.activeTab];
+    return entry && entry.searchAddon ? entry.searchAddon : null;
+  }
+
+  function openTerminalSearch() {
+    const bar = document.getElementById('terminal-search-bar');
+    const input = document.getElementById('terminal-search-input');
+    if (!bar || !input) return;
+    bar.style.display = 'flex';
+    // Attach Escape handler directly (delegation can miss it when input has focus)
+    input.onkeydown = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); closeTerminalSearch(); }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doTerminalSearch('next'); }
+      if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); doTerminalSearch('prev'); }
+    };
+    input.focus();
+    input.select();
+  }
+
+  function closeTerminalSearch() {
+    const bar = document.getElementById('terminal-search-bar');
+    const input = document.getElementById('terminal-search-input');
+    const count = document.getElementById('terminal-search-count');
+    if (bar) bar.style.display = 'none';
+    if (input) input.value = '';
+    if (count) count.textContent = '';
+    const addon = getActiveSearchAddon();
+    if (addon) addon.clearDecorations();
+    // Re-focus terminal
+    const state = projectTerminalTabs[selectedId];
+    if (state && activeTerminals[state.activeTab]) activeTerminals[state.activeTab].term.focus();
+  }
+
+  function doTerminalSearch(direction) {
+    const addon = getActiveSearchAddon();
+    const input = document.getElementById('terminal-search-input');
+    if (!addon || !input || !input.value) return;
+    const opts = {
+      regex: false,
+      wholeWord: false,
+      caseSensitive: false,
+      incremental: direction === 'next',
+      decorations: {
+        matchBackground: '#7c4dff40',
+        matchBorder: '#7c4dff',
+        matchOverviewRuler: '#7c4dff',
+        activeMatchBackground: '#ffb86c',
+        activeMatchBorder: '#ff9500',
+        activeMatchColorOverviewRuler: '#ff9500',
+      }
+    };
+    if (direction === 'prev') {
+      addon.findPrevious(input.value, opts);
+    } else {
+      addon.findNext(input.value, opts);
+    }
+  }
+
+  // Wire up search bar events (delegated — elements created during render)
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'terminal-search-next') doTerminalSearch('next');
+    if (e.target.id === 'terminal-search-prev') doTerminalSearch('prev');
+    if (e.target.id === 'terminal-search-close') closeTerminalSearch();
+  });
+  document.addEventListener('input', (e) => {
+    if (e.target.id === 'terminal-search-input') doTerminalSearch('next');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target.id === 'terminal-search-input') {
+      if (e.key === 'Escape') { e.preventDefault(); closeTerminalSearch(); }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doTerminalSearch('next'); }
+      if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); doTerminalSearch('prev'); }
+    }
+  });
 
   // Listen for PTY output
   window.api.onTerminalData(({ id, data }) => {
@@ -2147,16 +2301,48 @@
       }
     }
 
-    // ⌘F focus project search
+    // ⌘F search — terminal search when terminal tab active, otherwise project search
     if (meta && e.key === 'f') {
       e.preventDefault();
-      document.getElementById('project-search').focus();
+      if (activeDetailTab === 'terminal' && selectedId) {
+        openTerminalSearch();
+      } else {
+        document.getElementById('project-search').focus();
+      }
     }
 
     // ⌘N new project
     if (meta && e.key === 'n') {
       e.preventDefault();
       openModal();
+    }
+
+    // ⌘K clear terminal
+    if (meta && e.key === 'k' && activeDetailTab === 'terminal' && selectedId) {
+      e.preventDefault();
+      const state = projectTerminalTabs[selectedId];
+      if (state && activeTerminals[state.activeTab]) {
+        activeTerminals[state.activeTab].term.clear();
+      }
+    }
+
+    // Terminal font zoom: ⌘+/⌘-/⌘0
+    if (meta && activeDetailTab === 'terminal' && selectedId) {
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        terminalFontSize = Math.min(terminalFontSize + 1, 24);
+        applyTerminalFontSize();
+      }
+      if (e.key === '-') {
+        e.preventDefault();
+        terminalFontSize = Math.max(terminalFontSize - 1, 8);
+        applyTerminalFontSize();
+      }
+      if (e.key === '0') {
+        e.preventDefault();
+        terminalFontSize = 13;
+        applyTerminalFontSize();
+      }
     }
   });
 
