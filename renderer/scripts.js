@@ -1,0 +1,202 @@
+// ── Scripts Panel ─────────────────────────────────────────────────
+// All dynamic values are sanitized through esc() before insertion.
+(function () {
+  const S = App.state;
+  const { esc } = App.utils;
+
+  const commonNames = ['dev', 'start', 'serve', 'watch', 'run'];
+  const testNames = ['test', 'test:watch', 'test:cov', 'test:e2e', 'lint', 'lint:fix', 'typecheck', 'check', 'vet', 'clippy', 'fmt'];
+  const buildNames = ['build', 'compile', 'bundle', 'dist', 'generate', 'deploy', 'preview', 'tidy'];
+
+  function categorize(scripts) {
+    var dev = [], testLint = [], buildDeploy = [], other = [];
+    Object.keys(scripts).forEach(function (name) {
+      var lower = name.toLowerCase();
+      if (commonNames.indexOf(lower) !== -1) dev.push(name);
+      else if (testNames.indexOf(lower) !== -1) testLint.push(name);
+      else if (buildNames.indexOf(lower) !== -1) buildDeploy.push(name);
+      else other.push(name);
+    });
+    return { dev: dev, testLint: testLint, buildDeploy: buildDeploy, other: other };
+  }
+
+  function scriptKey(projectId, eco, name) {
+    return projectId + ':' + (eco ? eco + ':' : '') + name;
+  }
+
+  function scriptMsg(key) {
+    var out = S.scriptOutputs[key];
+    if (!out) return '';
+    return '<pre class="script-output-pre">' + esc(out) + '</pre>';
+  }
+
+  function showScriptOutput(key) {
+    var viewer = document.getElementById('script-output-viewer');
+    if (!viewer) return;
+    viewer.style.display = 'block';
+    // All content inserted via esc()-sanitized string concatenation
+    viewer.innerHTML =
+      '<div class="script-output-header">' +
+        '<span class="script-output-title">Output: ' + esc(key) + '</span>' +
+        '<button class="btn btn-sm script-output-close">Close</button>' +
+      '</div>' +
+      '<div class="script-output-body" id="script-output-body">' +
+        scriptMsg(key) +
+      '</div>';
+    viewer.querySelector('.script-output-close').addEventListener('click', function () {
+      viewer.style.display = 'none';
+      viewer.innerHTML = '';
+    });
+  }
+
+  function renderScriptItem(projectId, name, cmd, eco) {
+    var key = scriptKey(projectId, eco, name);
+    var isRunning = S.runningScriptKeys.has(key);
+    var hasOutput = !!S.scriptOutputs[key];
+
+    return '<div class="script-item" data-key="' + esc(key) + '">' +
+      '<div class="script-item-info">' +
+        '<span class="script-name">' + esc(name) + '</span>' +
+        '<span class="script-cmd">' + esc(cmd) + '</span>' +
+      '</div>' +
+      '<div class="script-item-actions">' +
+        (hasOutput
+          ? '<button class="btn btn-sm script-view-btn" data-key="' + esc(key) + '">View Output</button>'
+          : '') +
+        (isRunning
+          ? '<button class="btn btn-sm btn-danger script-stop-btn" data-key="' + esc(key) + '" data-name="' + esc(name) + '" data-eco="' + esc(eco || '') + '">Stop</button>'
+          : '<button class="btn btn-sm btn-primary script-run-btn" data-key="' + esc(key) + '" data-name="' + esc(name) + '" data-eco="' + esc(eco || '') + '">Run</button>') +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderCategorized(projectId, scripts, eco) {
+    var cats = categorize(scripts);
+    var html = '';
+    var sections = [
+      { label: 'Dev', items: cats.dev },
+      { label: 'Test & Lint', items: cats.testLint },
+      { label: 'Build & Deploy', items: cats.buildDeploy },
+      { label: 'Other', items: cats.other }
+    ];
+    sections.forEach(function (sec) {
+      if (sec.items.length === 0) return;
+      html += '<div class="script-category">' +
+        '<div class="script-category-label">' + esc(sec.label) + '</div>';
+      sec.items.forEach(function (name) {
+        html += renderScriptItem(projectId, name, scripts[name], eco);
+      });
+      html += '</div>';
+    });
+    return html;
+  }
+
+  function bindScriptButtons(container, project) {
+    container.querySelectorAll('.script-run-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.dataset.key;
+        var name = btn.dataset.name;
+        var eco = btn.dataset.eco || undefined;
+        S.runningScriptKeys.add(key);
+        S.scriptOutputs[key] = '';
+        window.api.runScript(project.path, name, eco);
+        renderScriptsPanel(project);
+      });
+    });
+    container.querySelectorAll('.script-stop-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.dataset.key;
+        var name = btn.dataset.name;
+        var eco = btn.dataset.eco || undefined;
+        window.api.stopScript(project.path, name, eco);
+        S.runningScriptKeys.delete(key);
+        renderScriptsPanel(project);
+      });
+    });
+    container.querySelectorAll('.script-view-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        showScriptOutput(btn.dataset.key);
+      });
+    });
+  }
+
+  async function renderScriptsPanel(project) {
+    var panel = document.getElementById('scripts-panel');
+    if (!panel) return;
+    panel.innerHTML = '<div class="panel-loading">Discovering scripts\u2026</div>';
+
+    var result;
+    try {
+      result = await window.api.getProjectScripts(project.path);
+    } catch (err) {
+      panel.innerHTML = '<div class="panel-empty">Could not load scripts: ' + esc(String(err)) + '</div>';
+      return;
+    }
+
+    if (!result || Object.keys(result).length === 0) {
+      panel.innerHTML = '<div class="panel-empty">No scripts found for this project.</div>';
+      return;
+    }
+
+    var ecosystems = Object.keys(result);
+    var html = '';
+
+    // Check if multiple ecosystems or just one
+    if (ecosystems.length === 1) {
+      var eco = ecosystems[0];
+      var scripts = result[eco];
+      if (!scripts || Object.keys(scripts).length === 0) {
+        panel.innerHTML = '<div class="panel-empty">No scripts found.</div>';
+        return;
+      }
+      html += renderCategorized(project.id, scripts, eco);
+    } else {
+      ecosystems.forEach(function (eco) {
+        var scripts = result[eco];
+        if (!scripts || Object.keys(scripts).length === 0) return;
+        html += '<div class="script-ecosystem">' +
+          '<div class="script-ecosystem-label">' + esc(eco) + '</div>' +
+          renderCategorized(project.id, scripts, eco) +
+        '</div>';
+      });
+    }
+
+    if (!html) {
+      panel.innerHTML = '<div class="panel-empty">No scripts found.</div>';
+      return;
+    }
+
+    html += '<div id="script-output-viewer" class="script-output-viewer" style="display:none;"></div>';
+    // All dynamic values sanitized via esc() before insertion
+    panel.innerHTML = html;
+    bindScriptButtons(panel, project);
+  }
+
+  // ── Script IPC listeners ────────────────────────────────────────
+  window.api.onScriptOutput(function (data) {
+    var key = data.key;
+    if (!S.scriptOutputs[key]) S.scriptOutputs[key] = '';
+    S.scriptOutputs[key] += data.text;
+
+    // Update live output viewer if visible
+    var body = document.getElementById('script-output-body');
+    if (body) {
+      // Content sanitized via esc() inside scriptMsg
+      body.innerHTML = scriptMsg(key);
+      body.scrollTop = body.scrollHeight;
+    }
+  });
+
+  window.api.onScriptExit(function (data) {
+    var key = data.key;
+    S.runningScriptKeys.delete(key);
+
+    // Re-render panel if viewing the project that owns this script
+    var project = S.projects.find(function (p) { return p.id === S.selectedId; });
+    if (project && S.activeDetailTab === 'scripts' && key.indexOf(project.id) === 0) {
+      renderScriptsPanel(project);
+    }
+  });
+
+  App.scripts = { renderScriptsPanel };
+})();
