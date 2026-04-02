@@ -60,7 +60,6 @@
 
     document.getElementById('input-name').value = project ? project.name : '';
     document.getElementById('input-path').value = project ? project.path : '';
-    document.getElementById('input-command').value = project ? project.command : '';
     document.getElementById('input-url').value = project ? (project.url || '') : '';
     document.getElementById('input-icon').value = project ? (project.icon || '') : '';
     document.getElementById('input-env').value = project ? (project.envVars || '') : '';
@@ -101,7 +100,7 @@
     var path = document.getElementById('input-path').value.trim();
     if (!name || !path) return;
 
-    var command = document.getElementById('input-command').value.trim();
+    var command = S.modalCommands.length && S.modalCommands[0].cmd ? S.modalCommands[0].cmd.trim() : '';
     var url = document.getElementById('input-url').value.trim();
     var icon = document.getElementById('input-icon').value.trim();
     var envVars = document.getElementById('input-env').value.trim();
@@ -450,8 +449,9 @@
           if (detected.name && !document.getElementById('input-name').value) {
             document.getElementById('input-name').value = detected.name;
           }
-          if (detected.command && !document.getElementById('input-command').value) {
-            document.getElementById('input-command').value = detected.command;
+          if (detected.command && S.modalCommands.length === 0) {
+            S.modalCommands.push({ label: '', cmd: detected.command, cwd: '' });
+            renderCommandRows();
           }
         }
       }

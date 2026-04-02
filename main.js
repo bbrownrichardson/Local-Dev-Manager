@@ -47,9 +47,15 @@ let isQuitting = false;
 app.on('before-quit', () => { isQuitting = true; });
 
 app.whenReady().then(() => {
-  // Custom menu — removes default Cmd+N "New Window" so the renderer can handle it
+  // Custom menu with app shortcuts routed through IPC so they work
+  // regardless of focus (xterm captures DOM events when focused)
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { role: 'appMenu' },
+    { label: 'File', submenu: [
+      { label: 'New Project', accelerator: 'CmdOrCtrl+N', click: () => {
+        const w = getMainWindow(); if (w) w.webContents.send('app-shortcut', 'new-project');
+      }},
+    ]},
     { role: 'editMenu' },
     { label: 'View', submenu: [
       { role: 'reload' }, { role: 'forceReload' }, { role: 'toggleDevTools' },
@@ -58,7 +64,11 @@ app.whenReady().then(() => {
       { type: 'separator' },
       { role: 'togglefullscreen' },
     ]},
-    { role: 'windowMenu' },
+    { label: 'Window', submenu: [
+      { role: 'minimize' }, { role: 'zoom' },
+      { type: 'separator' },
+      { role: 'front' },
+    ]},
   ]));
 
   backfillProjects(config.loadProjects, config.saveProjects);

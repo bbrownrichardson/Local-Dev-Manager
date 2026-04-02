@@ -92,6 +92,13 @@
     }
   });
 
+  /* ── Menu-driven shortcuts (work even when xterm has focus) ── */
+  if (window.api.onAppShortcut) {
+    window.api.onAppShortcut(function (action) {
+      if (action === 'new-project') App.modal.openModal();
+    });
+  }
+
   /* ── Exports ────────────────────────────────────────────────── */
 
   App.shortcuts = {};

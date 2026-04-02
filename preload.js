@@ -85,4 +85,5 @@ contextBridge.exposeInMainWorld('api', {
 
   onProjectStatus: (cb) => ipcRenderer.on('project-status', (_e, data) => cb(data)),
   onProjectLog: (cb) => ipcRenderer.on('project-log', (_e, data) => cb(data)),
+  onAppShortcut: (cb) => ipcRenderer.on('app-shortcut', (_e, action) => cb(action)),
 });
