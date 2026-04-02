@@ -173,6 +173,15 @@
     const term = makeTerminalInstance();
     const fitAddon = new FitAddon.FitAddon();
     term.loadAddon(fitAddon);
+
+    if (typeof Unicode11Addon !== 'undefined') {
+      try {
+        const unicode11 = new Unicode11Addon.Unicode11Addon();
+        term.loadAddon(unicode11);
+        term.unicode.activeVersion = '11';
+      } catch (_) {}
+    }
+
     term.open(container);
     requestAnimationFrame(() => { fitAddon.fit(); term.focus(); });
 
