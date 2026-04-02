@@ -1,4 +1,4 @@
-const { app } = require('electron');
+const { app, Menu } = require('electron');
 const { execSync } = require('child_process');
 
 // ── Fix PATH for packaged app ────────────────────────────────────────
@@ -47,6 +47,20 @@ let isQuitting = false;
 app.on('before-quit', () => { isQuitting = true; });
 
 app.whenReady().then(() => {
+  // Custom menu — removes default Cmd+N "New Window" so the renderer can handle it
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { role: 'appMenu' },
+    { role: 'editMenu' },
+    { label: 'View', submenu: [
+      { role: 'reload' }, { role: 'forceReload' }, { role: 'toggleDevTools' },
+      { type: 'separator' },
+      { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' },
+    ]},
+    { role: 'windowMenu' },
+  ]));
+
   backfillProjects(config.loadProjects, config.saveProjects);
 
   const win = createWindow();
