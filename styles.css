@@ -184,6 +184,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .btn-browse { padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 12px; cursor: pointer; white-space: nowrap; }
 .btn-browse:hover { border-color: var(--accent); }
 .form-hint { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
+.form-hint-inline { font-size: 10px; color: var(--text-dim); font-weight: 400; }
+.emoji-picker-wrap { display: flex; align-items: stretch; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; transition: border-color 0.15s; }
+.emoji-picker-wrap:focus-within { border-color: var(--accent); }
+.emoji-picker-btn { flex: 1; min-width: 0; padding: 4px; background: var(--bg); border: none; font-size: 22px; line-height: 1; text-align: center; color: var(--text); outline: none; }
+.emoji-picker-btn::placeholder { opacity: 0.4; }
+.emoji-picker-toggle { flex: 0 0 24px; background: var(--surface2); border: none; border-left: 1px solid var(--border); color: var(--text-dim); font-size: 10px; cursor: pointer; padding: 0; }
+.emoji-picker-toggle:hover { background: var(--surface3); color: var(--text); }
+.emoji-picker-dropdown { position: absolute; top: 100%; left: 0; z-index: 100; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; width: 220px; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.emoji-picker-dropdown button { background: none; border: none; font-size: 20px; padding: 4px; border-radius: 4px; cursor: pointer; line-height: 1; }
+.emoji-picker-dropdown button:hover { background: var(--surface2); }
+.emoji-picker-dropdown .emoji-clear { grid-column: 1 / -1; font-size: 11px; color: var(--text-dim); padding: 4px; text-align: center; border-top: 1px solid var(--border); margin-top: 4px; }
+.emoji-picker-dropdown .emoji-clear:hover { color: var(--red); }
 .form-row { display: flex; gap: 12px; }
 .form-row .form-group { flex: 1; }
 .env-textarea { min-height: 60px; font-family: 'SF Mono', Monaco, monospace; font-size: 12px; resize: vertical; }
@@ -277,7 +289,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .terminal-search-bar button:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
 
 /* Terminal container */
-.terminal-container { flex: 1; padding: 8px; background: #0a0a0a; margin: 0 16px 16px; border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm); overflow: hidden; }
+.terminal-container { flex: 1; padding: 8px; background: var(--terminal-bg, #0a0a0a); margin: 0 16px 16px; border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm); overflow: hidden; }
 .terminal-container .xterm { height: 100%; }
 .terminal-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-dim); font-size: 13px; }
 .terminal-placeholder code { background: var(--surface2); padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 0 4px; }
@@ -356,6 +368,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .git-sync-badge.conflict { background: var(--red-dim); color: var(--red); }
 .git-sync-badge.stash { background: rgba(162, 155, 254, 0.15); color: var(--accent); }
 
+.git-identity-bar { display: flex; align-items: center; gap: 6px; padding: 6px 14px; background: var(--surface1); border-radius: var(--radius-sm); font-size: 11px; color: var(--text-dim); }
+.git-identity-label { font-weight: 600; color: var(--text-dim); }
+.git-identity-value { color: var(--text); font-family: 'SF Mono', Monaco, monospace; }
 .git-actions-bar { display: flex; gap: 6px; flex-wrap: wrap; }
 .git-btn { padding: 5px 12px !important; font-size: 11px !important; white-space: nowrap; }
 

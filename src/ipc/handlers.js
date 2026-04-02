@@ -1,7 +1,7 @@
 const { ipcMain, dialog, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 // Core
 const config = require('../core/config');
@@ -382,6 +382,28 @@ function registerAll() {
         execSync(`git checkout -- "${filePath}"`, { cwd, encoding: 'utf-8', timeout: 5000, env: process.env });
       }
       return { success: true };
+    } catch (e) { return { error: e.stderr || e.message }; }
+  });
+
+  // ── Git identity ───────────────────────────────────────────────────
+  ipcMain.handle('git-set-identity', async (_e, cwd, identity) => {
+    try {
+      if (identity.name) {
+        execFileSync('git', ['config', 'user.name', identity.name], { cwd, encoding: 'utf-8', timeout: 5000 });
+      }
+      if (identity.email) {
+        execFileSync('git', ['config', 'user.email', identity.email], { cwd, encoding: 'utf-8', timeout: 5000 });
+      }
+      return { success: true };
+    } catch (e) { return { error: e.stderr || e.message }; }
+  });
+
+  ipcMain.handle('git-get-identity', async (_e, cwd) => {
+    try {
+      let name = '', email = '';
+      try { name = execFileSync('git', ['config', 'user.name'], { cwd, encoding: 'utf-8', timeout: 5000 }).trim(); } catch (_) {}
+      try { email = execFileSync('git', ['config', 'user.email'], { cwd, encoding: 'utf-8', timeout: 5000 }).trim(); } catch (_) {}
+      return { name, email };
     } catch (e) { return { error: e.stderr || e.message }; }
   });
 
