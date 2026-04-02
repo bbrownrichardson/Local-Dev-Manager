@@ -165,9 +165,13 @@
       <div class="form-hint" id="detect-hint">e.g. npm start, python manage.py runserver, docker compose up</div>
     </div>
     <div class="form-row">
-      <div class="form-group" style="flex:0 0 80px;">
+      <div class="form-group" style="flex:0 0 80px;position:relative;">
         <label>Icon</label>
-        <input type="text" id="input-icon" placeholder="🚀" style="font-size:24px;text-align:center;padding:6px;" maxlength="2" />
+        <div class="emoji-picker-wrap">
+          <input type="text" class="emoji-picker-btn" id="input-icon" placeholder="🚀" autocomplete="off" spellcheck="false" />
+          <button type="button" class="emoji-picker-toggle" id="btn-emoji-picker" title="Pick from list">▾</button>
+        </div>
+        <div class="emoji-picker-dropdown" id="emoji-picker-dropdown" style="display:none;"></div>
       </div>
       <div class="form-group" style="flex:1;">
         <label>URL (optional)</label>
@@ -190,6 +194,13 @@
       <div class="toggle-row">
         <label style="margin-bottom:0;">Auto-restart on crash</label>
         <div class="toggle" id="toggle-autorestart"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Git Identity <span class="form-hint-inline">(optional — overrides global git config for this project)</span></label>
+      <div class="form-row" style="gap:8px;">
+        <input type="text" id="input-git-name" placeholder="Name" style="flex:1;" />
+        <input type="email" id="input-git-email" placeholder="Email" style="flex:1;" />
       </div>
     </div>
     <div class="form-group">
@@ -231,6 +242,14 @@
       <label>Theme</label>
       <select id="settings-theme" style="width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;">
         <option value="system">System (follow device)</option>
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Terminal Theme</label>
+      <select id="settings-terminal-theme" style="width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;">
+        <option value="system">System (follow app theme)</option>
         <option value="dark">Dark</option>
         <option value="light">Light</option>
       </select>

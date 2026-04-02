@@ -67,6 +67,8 @@ contextBridge.exposeInMainWorld('api', {
   gitCheckoutBranch: (dirPath, branch) => ipcRenderer.invoke('git-checkout-branch', dirPath, branch),
   gitCreateBranch: (dirPath, branch) => ipcRenderer.invoke('git-create-branch', dirPath, branch),
   gitDiscardFile: (dirPath, filePath) => ipcRenderer.invoke('git-discard-file', dirPath, filePath),
+  gitSetIdentity: (dirPath, identity) => ipcRenderer.invoke('git-set-identity', dirPath, identity),
+  gitGetIdentity: (dirPath) => ipcRenderer.invoke('git-get-identity', dirPath),
 
   // Environment checker
   checkEnvVersions: (projectPath) => ipcRenderer.invoke('check-env-versions', projectPath),

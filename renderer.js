@@ -107,7 +107,7 @@
         <div class="project-dot ${(!p.command && !(p.commands && p.commands.length)) ? 'workspace' : (statuses[p.id] || 'stopped')}"></div>
         <div class="project-item-info">
           <div class="project-item-row-top">
-            <div class="project-item-name">${p.icon ? `<span style="font-size:14px;">${p.icon}</span>` : ''}${esc(p.name)}</div>
+            <div class="project-item-name">${p.icon ? `<span style="font-size:14px;margin-right:6px;">${p.icon}</span>` : ''}${esc(p.name)}</div>
             <div class="project-item-btns">
               ${p.command ? (isRunning
                 ? `<button class="pib pib-stop" data-action="stop" title="Stop">&#9632;</button>
@@ -588,20 +588,58 @@
     });
   }
 
+  const terminalThemes = {
+    dark: {
+      background: '#0a0a0a', foreground: '#cccccc', cursor: '#6c5ce7',
+      selectionBackground: 'rgba(108, 92, 231, 0.3)',
+      black: '#0a0a0a', red: '#e17055', green: '#00b894', yellow: '#fdcb6e',
+      blue: '#74b9ff', magenta: '#a29bfe', cyan: '#81ecec', white: '#dfe6e9',
+      brightBlack: '#636e72', brightRed: '#ff7675', brightGreen: '#55efc4',
+      brightYellow: '#ffeaa7', brightBlue: '#74b9ff', brightMagenta: '#a29bfe',
+      brightCyan: '#81ecec', brightWhite: '#ffffff',
+    },
+    light: {
+      background: '#f8f8f8', foreground: '#383a42', cursor: '#6c5ce7',
+      selectionBackground: 'rgba(108, 92, 231, 0.2)',
+      black: '#383a42', red: '#e45649', green: '#50a14f', yellow: '#c18401',
+      blue: '#4078f2', magenta: '#a626a4', cyan: '#0184bc', white: '#a0a1a7',
+      brightBlack: '#4f525e', brightRed: '#e06c75', brightGreen: '#98c379',
+      brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd',
+      brightCyan: '#56b6c2', brightWhite: '#ffffff',
+    },
+  };
+  let terminalThemeSetting = 'dark';
+
+  function resolveTerminalTheme() {
+    if (terminalThemeSetting === 'system') {
+      return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    }
+    return terminalThemeSetting;
+  }
+
+  function getTerminalTheme() {
+    return terminalThemes[resolveTerminalTheme()] || terminalThemes.dark;
+  }
+
+  function applyTerminalTheme() {
+    const theme = getTerminalTheme();
+    Object.values(activeTerminals).forEach(({ term, _mounted }) => {
+      if (term && _mounted) term.options.theme = theme;
+    });
+    document.querySelectorAll('.terminal-container').forEach(el => {
+      el.style.background = theme.background;
+    });
+    // Sync output log viewer colors
+    document.documentElement.style.setProperty('--log-bg', theme.background);
+    document.documentElement.style.setProperty('--log-text', theme.foreground);
+  }
+
   function makeTerminalInstance() {
     return new Terminal({
       cursorBlink: true,
       fontSize: terminalFontSize,
       fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-      theme: {
-        background: '#0a0a0a', foreground: '#cccccc', cursor: '#6c5ce7',
-        selectionBackground: 'rgba(108, 92, 231, 0.3)',
-        black: '#0a0a0a', red: '#e17055', green: '#00b894', yellow: '#fdcb6e',
-        blue: '#74b9ff', magenta: '#a29bfe', cyan: '#81ecec', white: '#dfe6e9',
-        brightBlack: '#636e72', brightRed: '#ff7675', brightGreen: '#55efc4',
-        brightYellow: '#ffeaa7', brightBlue: '#74b9ff', brightMagenta: '#a29bfe',
-        brightCyan: '#81ecec', brightWhite: '#ffffff',
-      },
+      theme: getTerminalTheme(),
       allowProposedApi: true,
     });
   }
@@ -1319,6 +1357,16 @@
       <button class="btn btn-edit git-btn" id="git-new-branch-cancel" style="padding:5px 10px!important;">Cancel</button>
     </div>`;
 
+    // ── Git identity indicator
+    if (project.gitIdentity && (project.gitIdentity.name || project.gitIdentity.email)) {
+      const idName = esc(project.gitIdentity.name || '');
+      const idEmail = esc(project.gitIdentity.email || '');
+      html += `<div class="git-identity-bar">
+        <span class="git-identity-label">Identity:</span>
+        <span class="git-identity-value">${idName}${idName && idEmail ? ' ' : ''}${idEmail ? '&lt;' + idEmail + '&gt;' : ''}</span>
+      </div>`;
+    }
+
     // ── Quick actions — disable buttons based on actual state
     const canPull = hasTracking;
     const canPush = hasRemote && hasCommits;
@@ -2001,6 +2049,8 @@
     autoRestart = project ? !!project.autoRestart : false;
     selectedColor = project ? (project.color || '') : '';
     document.getElementById('toggle-autorestart').className = 'toggle' + (autoRestart ? ' on' : '');
+    document.getElementById('input-git-name').value = project && project.gitIdentity ? (project.gitIdentity.name || '') : '';
+    document.getElementById('input-git-email').value = project && project.gitIdentity ? (project.gitIdentity.email || '') : '';
     document.querySelectorAll('.color-swatch').forEach(s => s.classList.toggle('active', s.dataset.color === selectedColor));
 
     if (project && project.commands && project.commands.length > 0) modalCommands = project.commands.map(c => ({ ...c }));
@@ -2024,11 +2074,16 @@
       cwd: c.cwd.trim() ? (c.cwd.trim().startsWith('/') ? c.cwd.trim() : projPath + '/' + c.cwd.trim()) : projPath,
     }));
     if (!name || !projPath) return;
+    const gitName = document.getElementById('input-git-name').value.trim();
+    const gitEmail = document.getElementById('input-git-email').value.trim();
+    const gitIdentity = (gitName || gitEmail) ? { name: gitName, email: gitEmail } : null;
     const command = commands.length > 0 ? commands[0].cmd : '';
-    const data = { name, path: projPath, command, commands, url, icon, color: selectedColor, autoRestart, envVars };
+    const data = { name, path: projPath, command, commands, url, icon, color: selectedColor, autoRestart, envVars, gitIdentity };
     if (editingId) { const p = projects.find(p => p.id === editingId); if (p) Object.assign(p, data); }
     else projects.push({ id: crypto.randomUUID(), ...data });
     await window.api.saveProjects(projects);
+    // Apply git identity to the repo's local config
+    if (gitIdentity && projPath) window.api.gitSetIdentity(projPath, gitIdentity);
     closeModal(); renderSidebar();
     if (editingId || projects.length === 1) selectProject(editingId || projects[projects.length - 1].id);
     refreshGitStatuses();
@@ -2081,6 +2136,38 @@
   document.getElementById('btn-cancel').addEventListener('click', closeModal);
   document.getElementById('btn-save').addEventListener('click', saveModal);
   document.getElementById('btn-add-cmd').addEventListener('click', () => { modalCommands.push({ label: '', cmd: '', cwd: '' }); renderCommandRows(); });
+  // Emoji picker
+  const emojiList = ['🚀','💻','🌐','🔥','⚡','🎨','🛠️','📦','🧪','🐍','🐳','☕','💎','🎯','📡','🔒','🤖','📊','🎮','💬','🛒','📱','🗄️','🧠','⭐','🔔','🌙','☁️','🍃','❤️'];
+  const dropdown = document.getElementById('emoji-picker-dropdown');
+  emojiList.forEach(e => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.emoji = e;
+    btn.textContent = e;
+    dropdown.appendChild(btn);
+  });
+  const clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.className = 'emoji-clear';
+  clearBtn.dataset.emoji = '';
+  clearBtn.textContent = 'Clear icon';
+  dropdown.appendChild(clearBtn);
+
+  // Auto-select content on focus so new emoji replaces the old one
+  document.getElementById('input-icon').addEventListener('focus', (e) => { e.target.select(); });
+
+  document.getElementById('btn-emoji-picker').addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.style.display = dropdown.style.display === 'none' ? 'grid' : 'none';
+  });
+  dropdown.addEventListener('click', (e) => {
+    const emoji = e.target.dataset.emoji;
+    if (emoji !== undefined) {
+      document.getElementById('input-icon').value = emoji;
+      dropdown.style.display = 'none';
+    }
+  });
+  document.addEventListener('click', () => { dropdown.style.display = 'none'; });
 
   // ── Modal mode tabs ──────────────────────────────────────────────
   let currentModalMode = 'existing';
@@ -2238,6 +2325,7 @@
     const settings = await window.api.getSettings();
     document.getElementById('settings-terminal').value = settings.terminal || 'Terminal';
     document.getElementById('settings-theme').value = settings.theme || 'dark';
+    document.getElementById('settings-terminal-theme').value = settings.terminalTheme || 'system';
     document.getElementById('settings-notification-sound').checked = settings.notificationSound !== false;
     document.getElementById('settings-modal').style.display = 'flex';
   });
@@ -2248,9 +2336,12 @@
     const settings = await window.api.getSettings();
     settings.terminal = document.getElementById('settings-terminal').value;
     settings.theme = document.getElementById('settings-theme').value;
+    settings.terminalTheme = document.getElementById('settings-terminal-theme').value;
     settings.notificationSound = document.getElementById('settings-notification-sound').checked;
     await window.api.saveSettings(settings);
     applyTheme(settings.theme);
+    terminalThemeSetting = settings.terminalTheme || 'system';
+    applyTerminalTheme();
     document.getElementById('settings-modal').style.display = 'none';
   });
 
@@ -2264,6 +2355,7 @@
     } else {
       document.documentElement.setAttribute('data-theme', theme);
     }
+    if (terminalThemeSetting === 'system') applyTerminalTheme();
   }
 
   // Listen for OS theme changes
@@ -2272,7 +2364,11 @@
   });
 
   // Apply saved theme on load
-  window.api.getSettings().then(s => applyTheme(s.theme));
+  window.api.getSettings().then(s => {
+    terminalThemeSetting = s.terminalTheme || 'system';
+    applyTheme(s.theme);
+    applyTerminalTheme();
+  });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { closeModal(); document.getElementById('profile-modal').style.display = 'none'; document.getElementById('settings-modal').style.display = 'none'; }
