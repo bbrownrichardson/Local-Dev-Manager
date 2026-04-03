@@ -1,6 +1,6 @@
 {
   "name": "local-dev-manager",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "A desktop app to manage and launch your local dev projects",
   "main": "main.js",
   "scripts": {
