@@ -142,6 +142,8 @@ echo "Reset update-config.json (manifest URL stays in .env only)"
 
 # Auto-commit version bump and create PR
 RELEASE_BRANCH="release/v${NEW_VERSION}"
+git branch -D "$RELEASE_BRANCH" 2>/dev/null || true
+git push origin --delete "$RELEASE_BRANCH" 2>/dev/null || true
 git checkout -b "$RELEASE_BRANCH"
 git add package.json package-lock.json
 git commit -m "chore: bump version to ${NEW_VERSION}"
