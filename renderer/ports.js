@@ -58,7 +58,7 @@
       btn.addEventListener('click', function () {
         var port = parseInt(btn.getAttribute('data-port'), 10);
         var rowId = btn.getAttribute('data-row');
-        window.api.killPort(port);
+        window.api.killPort(null, port);
         var row = document.getElementById(rowId);
         if (row) row.style.opacity = '0.3';
         setTimeout(function () { renderPortsPanel(); }, 800);

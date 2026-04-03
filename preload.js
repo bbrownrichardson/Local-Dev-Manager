@@ -48,7 +48,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Port conflicts & dependency checker
   detectPortConflicts: (projects) => ipcRenderer.invoke('detect-port-conflicts', projects),
-  killPort: (pid) => ipcRenderer.invoke('kill-port', pid),
+  killPort: (pid, port) => ipcRenderer.invoke('kill-port', pid, port),
   checkOutdated: (projectPath) => ipcRenderer.invoke('check-outdated', projectPath),
 
   // Git

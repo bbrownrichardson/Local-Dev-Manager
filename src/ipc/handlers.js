@@ -160,15 +160,35 @@ function registerAll() {
     catch (e) { console.error('Error in get-ports:', e); return { error: e.message }; }
   });
 
-  ipcMain.handle('kill-port', async (_e, pid) => {
-    try {
-      process.kill(pid, 'SIGTERM');
-      return { success: true };
-    } catch (e) {
-      // Try SIGKILL if SIGTERM failed
-      try { process.kill(pid, 'SIGKILL'); return { success: true }; }
-      catch (e2) { return { error: e2.message }; }
+  ipcMain.handle('kill-port', async (_e, pid, port) => {
+    const killed = new Set();
+    // If port is provided, find ALL pids on that port (handles child processes)
+    if (port && (process.platform === 'darwin' || process.platform === 'linux')) {
+      try {
+        const out = execSync(`lsof -ti:${parseInt(port)}`, { encoding: 'utf-8', timeout: 3000 }).trim();
+        for (const p of out.split('\n')) {
+          const n = parseInt(p);
+          if (n) killed.add(n);
+        }
+      } catch (_) {}
     }
+    // Always include the originally reported pid
+    if (pid) killed.add(pid);
+
+    let lastError = null;
+    for (const p of killed) {
+      try { process.kill(p, 'SIGTERM'); } catch (_) {
+        try { process.kill(p, 'SIGKILL'); } catch (e) { lastError = e.message; }
+      }
+    }
+    // Force-kill any survivors after a short delay
+    setTimeout(() => {
+      for (const p of killed) {
+        try { process.kill(p, 'SIGKILL'); } catch (_) {}
+      }
+    }, 1500);
+
+    return killed.size > 0 ? { success: true, killed: killed.size } : { error: lastError || 'No processes found' };
   });
 
   ipcMain.handle('check-health', async (_e, url) => {
