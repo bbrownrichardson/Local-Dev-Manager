@@ -4,12 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$ROOT_DIR/.env"
 
-# Load .env
-if [ ! -f "$ENV_FILE" ]; then
-  echo "Error: .env file not found at $ENV_FILE"
-  exit 1
+# Load .env if present (not needed in CI where env vars come from secrets)
+if [ -f "$ENV_FILE" ]; then
+  set -a; source "$ENV_FILE"; set +a
 fi
-set -a; source "$ENV_FILE"; set +a
 
 # Validate required env vars
 : "${GDRIVE_FOLDER_ID:?GDRIVE_FOLDER_ID not set in .env}"
@@ -30,13 +28,21 @@ fi
 
 cd "$ROOT_DIR"
 
+# Ensure working tree is clean before release
+if [ -n "$(git status --porcelain)" ]; then
+  echo "Error: Working tree is not clean. Commit or stash changes before releasing."
+  exit 1
+fi
+
+MAIN_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
 # Bump version
 OLD_VERSION=$(node -p "require('./package.json').version")
 npm version "$BUMP" --no-git-tag-version
 NEW_VERSION=$(node -p "require('./package.json').version")
 echo "Version bumped: $OLD_VERSION -> $NEW_VERSION"
 
-# Write update-config.json with manifest URL (if manifest ID is known)
+# Write update-config.json with manifest URL for the build (temporary — reset after)
 if [ -n "${UPDATE_MANIFEST_ID:-}" ]; then
   MANIFEST_URL="https://drive.usercontent.google.com/download?id=${UPDATE_MANIFEST_ID}&export=download&confirm=t"
   echo "{\"manifestUrl\":\"${MANIFEST_URL}\"}" > "$ROOT_DIR/src/update-config.json"
@@ -112,21 +118,45 @@ MANIFEST
     ")
 
     if [ -n "$MANIFEST_ID" ]; then
-      echo "UPDATE_MANIFEST_ID=$MANIFEST_ID" >> "$ENV_FILE"
+      if [ -f "$ENV_FILE" ]; then
+        echo "UPDATE_MANIFEST_ID=$MANIFEST_ID" >> "$ENV_FILE"
+        echo "Added UPDATE_MANIFEST_ID to .env automatically."
+      fi
       echo ""
       echo "========================================="
       echo " FIRST-TIME SETUP COMPLETE"
       echo "========================================="
       echo " UPDATE_MANIFEST_ID=$MANIFEST_ID"
-      echo " Added to .env automatically."
       echo ""
       echo " This build does NOT have auto-update."
-      echo " Run 'npm run release' again to create"
-      echo " a build with auto-update enabled."
+      echo " Save this ID as a secret and re-run"
+      echo " to enable auto-update."
       echo "========================================="
     fi
   fi
 fi
 
+# Reset update-config.json so the manifest URL is not committed
+echo '{"manifestUrl":""}' > "$ROOT_DIR/src/update-config.json"
+echo "Reset update-config.json (manifest URL stays in .env only)"
+
+# Auto-commit version bump and create PR
+RELEASE_BRANCH="release/v${NEW_VERSION}"
+git checkout -b "$RELEASE_BRANCH"
+git add package.json package-lock.json
+git commit -m "chore: bump version to ${NEW_VERSION}"
+git push -u origin "$RELEASE_BRANCH"
+
+echo "Creating pull request..."
+PR_URL=$(gh pr create \
+  --title "chore: release v${NEW_VERSION}" \
+  --body "Automated release PR — bumps version from ${OLD_VERSION} to ${NEW_VERSION}." \
+  --base "$MAIN_BRANCH" \
+  --head "$RELEASE_BRANCH")
+
 echo ""
-echo "Release v$NEW_VERSION complete!"
+echo "========================================="
+echo " Release v$NEW_VERSION complete!"
+echo "========================================="
+echo " PR: $PR_URL"
+echo "========================================="
