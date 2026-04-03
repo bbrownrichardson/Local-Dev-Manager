@@ -119,10 +119,26 @@ async function downloadAndInstall(downloadUrl) {
     timeout: 60000,
   });
 
-  // Parse mount point from hdiutil output (last column of last line)
+  // Parse mount point from hdiutil output
+  // Output format: "/dev/diskN\tTYPE\t/Volumes/Name" but -quiet may omit some lines
+  // Look for the line containing /Volumes/ which is the actual mount point
   const lines = mountOutput.trim().split('\n');
-  const lastLine = lines[lines.length - 1];
-  const mountPoint = lastLine.split('\t').pop().trim();
+  let mountPoint = '';
+  for (const line of lines) {
+    const match = line.match(/\t(\/Volumes\/.+)$/);
+    if (match) {
+      mountPoint = match[1].trim();
+      break;
+    }
+  }
+  if (!mountPoint) {
+    // Fallback: try last line, split on tab
+    const lastLine = lines[lines.length - 1] || '';
+    mountPoint = lastLine.split('\t').pop().trim();
+  }
+  if (!mountPoint || !fs.existsSync(mountPoint)) {
+    throw new Error(`Failed to mount DMG: could not determine mount point from hdiutil output`);
+  }
 
   try {
     // Find .app in mounted DMG

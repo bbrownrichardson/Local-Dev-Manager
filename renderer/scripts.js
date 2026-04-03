@@ -91,15 +91,24 @@
     return html;
   }
 
-  function bindScriptButtons(container, project) {
+  function resolveScriptCommand(name, scriptType, scripts) {
+    if (scriptType === 'npm' || scriptType === 'make') return undefined;
+    // For shell types, the command is the value in the scripts map
+    return scripts[name] || name;
+  }
+
+  function bindScriptButtons(container, project, scriptGroups) {
     container.querySelectorAll('.script-run-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var key = btn.dataset.key;
         var name = btn.dataset.name;
-        var eco = btn.dataset.eco || undefined;
+        var eco = btn.dataset.eco || '';
+        var group = scriptGroups.find(function (g) { return g.label === eco; });
+        var scriptType = group ? group.type : 'npm';
+        var scriptCmd = group ? resolveScriptCommand(name, scriptType, group.scripts) : undefined;
         S.runningScriptKeys.add(key);
         S.scriptOutputs[key] = '';
-        window.api.runScript(project.path, name, eco);
+        window.api.runScript(project.id, project.path, name, scriptType, scriptCmd);
         renderScriptsPanel(project);
       });
     });
@@ -107,8 +116,7 @@
       btn.addEventListener('click', function () {
         var key = btn.dataset.key;
         var name = btn.dataset.name;
-        var eco = btn.dataset.eco || undefined;
-        window.api.stopScript(project.path, name, eco);
+        window.api.stopScript(project.id, name);
         S.runningScriptKeys.delete(key);
         renderScriptsPanel(project);
       });
@@ -133,30 +141,37 @@
       return;
     }
 
-    if (!result || Object.keys(result).length === 0) {
+    if (!result || (!result.scripts && !result.groups)) {
       panel.innerHTML = '<div class="panel-empty">No scripts found for this project.</div>';
       return;
     }
 
-    var ecosystems = Object.keys(result);
+    // Normalize backend response into an array of { type, label, scripts }
+    var groups;
+    if (result.multi && result.groups) {
+      groups = result.groups;
+    } else if (result.scripts) {
+      groups = [{ type: result.type, label: result.label || result.type, scripts: result.scripts }];
+    } else {
+      panel.innerHTML = '<div class="panel-empty">No scripts found.</div>';
+      return;
+    }
+
     var html = '';
 
-    // Check if multiple ecosystems or just one
-    if (ecosystems.length === 1) {
-      var eco = ecosystems[0];
-      var scripts = result[eco];
-      if (!scripts || Object.keys(scripts).length === 0) {
+    if (groups.length === 1) {
+      var group = groups[0];
+      if (!group.scripts || Object.keys(group.scripts).length === 0) {
         panel.innerHTML = '<div class="panel-empty">No scripts found.</div>';
         return;
       }
-      html += renderCategorized(project.id, scripts, eco);
+      html += renderCategorized(project.id, group.scripts, group.label);
     } else {
-      ecosystems.forEach(function (eco) {
-        var scripts = result[eco];
-        if (!scripts || Object.keys(scripts).length === 0) return;
+      groups.forEach(function (group) {
+        if (!group.scripts || Object.keys(group.scripts).length === 0) return;
         html += '<div class="script-ecosystem">' +
-          '<div class="script-ecosystem-label">' + esc(eco) + '</div>' +
-          renderCategorized(project.id, scripts, eco) +
+          '<div class="script-ecosystem-label">' + esc(group.label) + '</div>' +
+          renderCategorized(project.id, group.scripts, group.label) +
         '</div>';
       });
     }
@@ -169,31 +184,50 @@
     html += '<div id="script-output-viewer" class="script-output-viewer" style="display:none;"></div>';
     // All dynamic values sanitized via esc() before insertion
     panel.innerHTML = html;
-    bindScriptButtons(panel, project);
+    bindScriptButtons(panel, project, groups);
   }
 
   // ── Script IPC listeners ────────────────────────────────────────
   window.api.onScriptOutput(function (data) {
-    var key = data.key;
-    if (!S.scriptOutputs[key]) S.scriptOutputs[key] = '';
-    S.scriptOutputs[key] += data.text;
+    // Backend sends { projectId, script, data }
+    // Match against all tracked keys that end with the script name for this project
+    var suffix = ':' + data.script;
+    var matched = false;
+    Object.keys(S.scriptOutputs).forEach(function (k) {
+      if (k.indexOf(data.projectId) === 0 && k.slice(-(suffix.length)) === suffix) {
+        S.scriptOutputs[k] += data.data;
+        matched = true;
 
-    // Update live output viewer if visible
-    var body = document.getElementById('script-output-body');
-    if (body) {
-      // Content sanitized via esc() inside scriptMsg
-      body.innerHTML = scriptMsg(key);
-      body.scrollTop = body.scrollHeight;
+        // Update live output viewer if visible
+        var body = document.getElementById('script-output-body');
+        if (body) {
+          body.innerHTML = scriptMsg(k);
+          body.scrollTop = body.scrollHeight;
+        }
+      }
+    });
+    if (!matched) {
+      // Fallback: use projectId:script as key
+      var fallbackKey = data.projectId + ':' + data.script;
+      if (!S.scriptOutputs[fallbackKey]) S.scriptOutputs[fallbackKey] = '';
+      S.scriptOutputs[fallbackKey] += data.data;
     }
   });
 
   window.api.onScriptExit(function (data) {
-    var key = data.key;
-    S.runningScriptKeys.delete(key);
+    // Backend sends { projectId, script, code }
+    var suffix = ':' + data.script;
+    var key = null;
+    S.runningScriptKeys.forEach(function (k) {
+      if (k.indexOf(data.projectId) === 0 && k.slice(-(suffix.length)) === suffix) {
+        key = k;
+      }
+    });
+    if (key) S.runningScriptKeys.delete(key);
 
     // Re-render panel if viewing the project that owns this script
     var project = S.projects.find(function (p) { return p.id === S.selectedId; });
-    if (project && S.activeDetailTab === 'scripts' && key.indexOf(project.id) === 0) {
+    if (project && S.activeDetailTab === 'scripts' && key && key.indexOf(project.id) === 0) {
       renderScriptsPanel(project);
     }
   });
