@@ -1904,7 +1904,7 @@
         const port = btn.dataset.port;
         btn.textContent = 'Killing...';
         btn.disabled = true;
-        const result = await window.api.killPort(pid);
+        const result = await window.api.killPort(pid, port);
         if (result.success) {
           const row = btn.closest('.port-row');
           row.style.opacity = '0.4';
