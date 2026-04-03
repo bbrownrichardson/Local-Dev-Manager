@@ -18,6 +18,14 @@
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; user-select: none; }
 .log-viewer, .env-textarea { user-select: text; -webkit-user-select: text; cursor: text; }
 
+/* Update banner */
+.update-banner { display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 80px; background: var(--accent); color: #fff; font-size: 12px; }
+.update-banner span { flex: 1; }
+.update-banner .btn { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: #fff; }
+.update-banner .btn:hover { background: rgba(255,255,255,0.3); }
+.update-banner-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 16px; cursor: pointer; padding: 0 4px; }
+.update-banner-close:hover { color: #fff; }
+
 .titlebar { -webkit-app-region: drag; height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 80px; font-size: 13px; color: var(--text-dim); letter-spacing: 0.5px; }
 .titlebar-actions { display: flex; gap: 6px; -webkit-app-region: no-drag; }
 .titlebar-btn { padding: 4px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text-dim); font-size: 11px; cursor: pointer; transition: all 0.15s; }

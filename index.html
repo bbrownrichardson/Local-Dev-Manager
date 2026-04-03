@@ -9,6 +9,11 @@
 </head>
 <body>
 
+<div id="update-banner" class="update-banner" style="display:none;">
+  <span id="update-banner-text"></span>
+  <button class="btn btn-start" id="update-banner-btn" style="padding:4px 12px;font-size:11px;">Update Now</button>
+  <button class="update-banner-close" id="update-banner-close">&times;</button>
+</div>
 <div class="titlebar">
   <span>Local Dev Manager</span>
   <div class="titlebar-actions">
@@ -272,6 +277,15 @@
       </label>
     </div>
     <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
+      <label>Updates</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="settings-version" style="font-size:12px;color:var(--text-dim);"></span>
+        <div style="flex:1;"></div>
+        <button class="btn-browse" id="settings-check-update" style="text-align:center;">Check for Updates</button>
+      </div>
+      <div id="settings-update-status" class="form-hint"></div>
+    </div>
+    <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
       <label>Data</label>
       <div style="display:flex;gap:8px;">
         <button class="btn-browse" id="settings-export" style="flex:1;text-align:center;">Export Config</button>
@@ -300,6 +314,7 @@
 <script src="renderer/modal.js"></script>
 <script src="renderer/settings.js"></script>
 <script src="renderer/shortcuts.js"></script>
+<script src="renderer/updater.js"></script>
 <script src="renderer/app.js"></script>
 </body>
 </html>

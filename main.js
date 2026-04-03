@@ -22,6 +22,7 @@ const tray = require('./src/core/tray');
 const scripts = require('./src/features/scripts');
 const terminal = require('./src/features/terminal');
 const tunnel = require('./src/features/tunnel');
+const updater = require('./src/features/updater');
 const { backfillProjects } = require('./src/services/detect');
 const ipcHandlers = require('./src/ipc/handlers');
 
@@ -33,6 +34,7 @@ logger.init(mw);
 scripts.init(mw);
 terminal.init(mw);
 tunnel.init(mw);
+updater.init(mw);
 tray.init(mw);
 
 // Wire up tunnel stopper to break circular dependency
@@ -54,6 +56,9 @@ app.whenReady().then(() => {
     { label: 'File', submenu: [
       { label: 'New Project', accelerator: 'CmdOrCtrl+N', click: () => {
         const w = getMainWindow(); if (w) w.webContents.send('app-shortcut', 'new-project');
+      }},
+      { label: 'New Terminal Tab', accelerator: 'CmdOrCtrl+T', click: () => {
+        const w = getMainWindow(); if (w) w.webContents.send('app-shortcut', 'new-terminal-tab');
       }},
     ]},
     { role: 'editMenu' },

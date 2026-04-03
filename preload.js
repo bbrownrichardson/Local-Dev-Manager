@@ -83,6 +83,13 @@ contextBridge.exposeInMainWorld('api', {
   clearAppLogs: () => ipcRenderer.invoke('clear-app-logs'),
   onAppLog: (cb) => ipcRenderer.on('app-log', (_e, data) => cb(data)),
 
+  // Auto-update
+  checkForUpdate: () => ipcRenderer.invoke('check-for-update'),
+  installUpdate: (downloadUrl) => ipcRenderer.invoke('install-update', downloadUrl),
+  relaunchApp: () => ipcRenderer.invoke('relaunch-app'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_e, data) => cb(data)),
+
   onProjectStatus: (cb) => ipcRenderer.on('project-status', (_e, data) => cb(data)),
   onProjectLog: (cb) => ipcRenderer.on('project-log', (_e, data) => cb(data)),
   onAppShortcut: (cb) => ipcRenderer.on('app-shortcut', (_e, action) => cb(action)),

@@ -35,6 +35,7 @@ App.state = {
   currentThemeSetting: 'system',
   currentModalMode: 'existing',
   selectedTpl: 'vite-react',
+  updateInfo: null,
 };
 
 App.icons = {

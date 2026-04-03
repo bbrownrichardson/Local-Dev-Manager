@@ -253,6 +253,12 @@
       }
       if (meta && e.key === 'f') { e.preventDefault(); openTerminalSearch(); return false; }
       if (meta && e.key === 'k') { e.preventDefault(); term.clear(); return false; }
+      if (meta && e.key === 't') {
+        e.preventDefault();
+        var proj = S.projects.find(function (p) { return p.id === S.selectedId; });
+        if (proj) addTerminalTab(proj);
+        return false;
+      }
       // Font zoom (Cmd+Plus/Minus/0) is handled by the global shortcuts handler in shortcuts.js
       // so that it works whether xterm has focus or not. Let these events bubble.
       return true;
