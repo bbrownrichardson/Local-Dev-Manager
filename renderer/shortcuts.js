@@ -63,6 +63,13 @@
       App.modal.openModal();
     }
 
+    /* Cmd+T new terminal tab (when viewing terminal) */
+    if (meta && e.key === 't' && S.activeDetailTab === 'terminal' && S.selectedId) {
+      e.preventDefault();
+      var proj = S.projects.find(function (p) { return p.id === S.selectedId; });
+      if (proj) App.terminal.addTerminalTab(proj);
+    }
+
     /* Cmd+K clear terminal */
     if (meta && e.key === 'k' && S.activeDetailTab === 'terminal' && S.selectedId) {
       e.preventDefault();
@@ -91,6 +98,17 @@
       }
     }
   });
+
+  /* ── Menu-driven shortcuts (work even when xterm has focus) ── */
+  if (window.api.onAppShortcut) {
+    window.api.onAppShortcut(function (action) {
+      if (action === 'new-project') App.modal.openModal();
+      if (action === 'new-terminal-tab' && S.activeDetailTab === 'terminal' && S.selectedId) {
+        var proj = S.projects.find(function (p) { return p.id === S.selectedId; });
+        if (proj) App.terminal.addTerminalTab(proj);
+      }
+    });
+  }
 
   /* ── Exports ────────────────────────────────────────────────── */
 

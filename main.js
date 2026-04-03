@@ -1,4 +1,4 @@
-const { app } = require('electron');
+const { app, Menu } = require('electron');
 const { execSync } = require('child_process');
 
 // ── Fix PATH for packaged app ────────────────────────────────────────
@@ -22,6 +22,7 @@ const tray = require('./src/core/tray');
 const scripts = require('./src/features/scripts');
 const terminal = require('./src/features/terminal');
 const tunnel = require('./src/features/tunnel');
+const updater = require('./src/features/updater');
 const { backfillProjects } = require('./src/services/detect');
 const ipcHandlers = require('./src/ipc/handlers');
 
@@ -33,6 +34,7 @@ logger.init(mw);
 scripts.init(mw);
 terminal.init(mw);
 tunnel.init(mw);
+updater.init(mw);
 tray.init(mw);
 
 // Wire up tunnel stopper to break circular dependency
@@ -47,6 +49,33 @@ let isQuitting = false;
 app.on('before-quit', () => { isQuitting = true; });
 
 app.whenReady().then(() => {
+  // Custom menu with app shortcuts routed through IPC so they work
+  // regardless of focus (xterm captures DOM events when focused)
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { role: 'appMenu' },
+    { label: 'File', submenu: [
+      { label: 'New Project', accelerator: 'CmdOrCtrl+N', click: () => {
+        const w = getMainWindow(); if (w) w.webContents.send('app-shortcut', 'new-project');
+      }},
+      { label: 'New Terminal Tab', accelerator: 'CmdOrCtrl+T', click: () => {
+        const w = getMainWindow(); if (w) w.webContents.send('app-shortcut', 'new-terminal-tab');
+      }},
+    ]},
+    { role: 'editMenu' },
+    { label: 'View', submenu: [
+      { role: 'reload' }, { role: 'forceReload' }, { role: 'toggleDevTools' },
+      { type: 'separator' },
+      { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' },
+    ]},
+    { label: 'Window', submenu: [
+      { role: 'minimize' }, { role: 'zoom' },
+      { type: 'separator' },
+      { role: 'front' },
+    ]},
+  ]));
+
   backfillProjects(config.loadProjects, config.saveProjects);
 
   const win = createWindow();

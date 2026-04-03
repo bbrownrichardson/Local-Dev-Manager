@@ -8,11 +8,15 @@
     "build": "electron-rebuild -f -w node-pty && electron-builder --mac",
     "build:all": "electron-rebuild -f -w node-pty && electron-builder --mac --win --linux",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "release": "bash scripts/release.sh",
+    "release:minor": "bash scripts/release.sh minor",
+    "release:major": "bash scripts/release.sh major"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.15.0",
+    "@xterm/addon-unicode11": "^0.8.0",
     "@xterm/xterm": "^5.5.0",
     "node-pty": "^1.1.0"
   },

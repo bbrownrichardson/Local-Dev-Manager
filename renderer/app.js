@@ -422,7 +422,16 @@
     document.getElementById('settings-theme').value = settings.theme || 'dark';
     document.getElementById('settings-terminal-theme').value = settings.terminalTheme || 'system';
     document.getElementById('settings-notification-sound').checked = settings.notificationSound !== false;
+    // Show app version
+    window.api.getAppVersion().then(function (v) {
+      var el = document.getElementById('settings-version');
+      if (el) el.textContent = 'v' + v;
+    });
+    document.getElementById('settings-update-status').textContent = '';
     document.getElementById('settings-modal').style.display = 'flex';
+  });
+  document.getElementById('settings-check-update').addEventListener('click', function () {
+    App.updater.checkUpdateFromSettings();
   });
   document.getElementById('settings-export').addEventListener('click', () => { App.settings.exportConfig(); });
   document.getElementById('settings-import').addEventListener('click', () => { App.settings.importConfig(); });

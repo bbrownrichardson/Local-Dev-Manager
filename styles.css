@@ -18,6 +18,14 @@
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; user-select: none; }
 .log-viewer, .env-textarea { user-select: text; -webkit-user-select: text; cursor: text; }
 
+/* Update banner */
+.update-banner { display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 80px; background: var(--accent); color: #fff; font-size: 12px; }
+.update-banner span { flex: 1; }
+.update-banner .btn { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: #fff; }
+.update-banner .btn:hover { background: rgba(255,255,255,0.3); }
+.update-banner-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 16px; cursor: pointer; padding: 0 4px; }
+.update-banner-close:hover { color: #fff; }
+
 .titlebar { -webkit-app-region: drag; height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 80px; font-size: 13px; color: var(--text-dim); letter-spacing: 0.5px; }
 .titlebar-actions { display: flex; gap: 6px; -webkit-app-region: no-drag; }
 .titlebar-btn { padding: 4px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text-dim); font-size: 11px; cursor: pointer; transition: all 0.15s; }
@@ -299,15 +307,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .scripts-list { display: flex; flex-direction: column; gap: 16px; }
 .scripts-group { display: flex; flex-direction: column; gap: 6px; }
 .scripts-group-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 2px; }
+.script-category { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.script-category-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 2px; }
+.script-ecosystem { margin-bottom: 16px; }
+.script-ecosystem-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 .script-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--surface2); border-radius: var(--radius-sm); border: 1px solid transparent; transition: all 0.1s; }
 .script-item:hover { border-color: var(--border); }
-.script-run-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--green); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.1s; }
-.script-run-btn:hover { background: rgba(0, 184, 148, 0.15); border-color: var(--green); }
-.script-run-btn.running { color: var(--red); }
-.script-run-btn.running:hover { background: rgba(225, 112, 85, 0.15); border-color: var(--red); }
-.script-info { display: flex; flex-direction: column; min-width: 0; }
+.script-item-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.script-item-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .script-name { font-size: 13px; font-weight: 500; color: var(--text); }
 .script-cmd { font-size: 11px; color: var(--text-dim); font-family: 'SF Mono', Monaco, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn-primary { border: 1px solid var(--border); background: var(--bg); color: var(--green); cursor: pointer; transition: all 0.1s; }
+.btn-primary:hover { background: rgba(0, 184, 148, 0.15); border-color: var(--green); }
 .scripts-subgroup { margin-bottom: 8px; }
 .scripts-subgroup-title { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 3px; opacity: 0.6; }
 .script-check-deps { font-size: 11px; padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: pointer; align-self: flex-start; transition: all 0.1s; }
@@ -480,14 +491,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  background: var(--card-bg);
+  background: var(--surface2);
   border-bottom: 1px solid var(--border);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-dim);
 }
 .script-output-header div { display: flex; gap: 4px; }
-.script-output-content {
+.script-output-body {
   padding: 10px;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 11px;

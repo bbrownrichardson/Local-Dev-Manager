@@ -56,6 +56,11 @@
       await loadScript(`${localBase}/addon-search/lib/addon-search.js`).catch(() =>
         loadScript(`${cdnBase}/@xterm/addon-search@0.15.0/lib/addon-search.js`)
       );
+
+      // Load unicode11 addon (fixes emoji width calculation)
+      await loadScript(`${localBase}/addon-unicode11/lib/addon-unicode11.js`).catch(() =>
+        loadScript(`${cdnBase}/@xterm/addon-unicode11@0.8.0/lib/addon-unicode11.js`)
+      );
     }
 
     // Store promise for renderer to await

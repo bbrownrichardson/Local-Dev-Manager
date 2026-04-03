@@ -19,6 +19,7 @@ const git = require('../features/git');
 const terminal = require('../features/terminal');
 const tunnel = require('../features/tunnel');
 const env = require('../features/env');
+const updater = require('../features/updater');
 
 /**
  * Register all IPC handlers.
@@ -469,6 +470,27 @@ function registerAll() {
   ipcMain.handle('clear-app-logs', async () => {
     logger.clearLogs();
     return true;
+  });
+
+  // ── Auto-update ─────────────────────────────────────────────────
+  ipcMain.handle('check-for-update', async () => {
+    try { return await updater.checkForUpdate(); }
+    catch (e) { console.error('Error in check-for-update:', e); return { error: e.message }; }
+  });
+
+  ipcMain.handle('install-update', async (_e, downloadUrl) => {
+    try { return await updater.downloadAndInstall(downloadUrl); }
+    catch (e) { console.error('Error in install-update:', e); return { error: e.message }; }
+  });
+
+  ipcMain.handle('relaunch-app', async () => {
+    updater.relaunchApp();
+    return true;
+  });
+
+  ipcMain.handle('get-app-version', async () => {
+    const { app } = require('electron');
+    return app.getVersion();
   });
 }
 
