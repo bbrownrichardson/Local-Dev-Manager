@@ -114,7 +114,7 @@ async function downloadAndInstall(downloadUrl) {
 
   // Mount DMG
   send({ stage: 'installing', percent: 0 });
-  const mountOutput = execSync(`hdiutil attach "${dmgPath}" -nobrowse -quiet`, {
+  const mountOutput = execSync(`hdiutil attach "${dmgPath}" -nobrowse`, {
     encoding: 'utf-8',
     timeout: 60000,
   });
