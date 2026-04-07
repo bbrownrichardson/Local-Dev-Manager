@@ -79,11 +79,15 @@
     if (!bar) return;
     const state = ensureProjectTabs(project.id);
     const canAdd = state.tabs.length < S.MAX_TERMINALS;
-    bar.innerHTML = state.tabs.map((t, i) =>
-      '<button class="term-tab ' + (t.id === state.activeTab ? 'active' : '') + '" data-tid="' + t.id + '">' +
-        '<span>' + (i + 1) + '</span>' + (state.tabs.length > 1 ? '<span class="term-tab-close" data-tid="' + t.id + '">&times;</span>' : '') +
-      '</button>'
-    ).join('') + (canAdd ? '<button class="term-tab term-tab-add" id="btn-add-term">+</button>' : '');
+    bar.innerHTML = state.tabs.map((t, i) => {
+      var isAi = t.aiKey;
+      var aiTool = isAi ? App.aiTools[t.aiKey] : null;
+      var logo = isAi ? (aiTool ? aiTool.logo : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg>') : '';
+      var tabLabel = isAi ? '<span class="term-tab-ai-logo">' + logo + '</span><span>' + (t.aiLabel || t.aiKey) + '</span>' : '<span>' + (i + 1) + '</span>';
+      return '<button class="term-tab ' + (t.id === state.activeTab ? 'active' : '') + (isAi ? ' term-tab-ai' : '') + '" data-tid="' + t.id + '">' +
+        tabLabel + (state.tabs.length > 1 ? '<span class="term-tab-close" data-tid="' + t.id + '">&times;</span>' : '') +
+      '</button>';
+    }).join('') + (canAdd ? '<button class="term-tab term-tab-add" id="btn-add-term">+</button>' : '');
 
     bar.querySelectorAll('.term-tab:not(.term-tab-add)').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -107,15 +111,29 @@
     if (addBtn) addBtn.addEventListener('click', () => addTerminalTab(project));
   }
 
-  async function addTerminalTab(project) {
+  async function addTerminalTab(project, opts) {
     const state = ensureProjectTabs(project.id);
-    if (state.tabs.length >= S.MAX_TERMINALS) return;
+    if (state.tabs.length >= S.MAX_TERMINALS) return null;
     const newId = project.id + ':' + state.nextIdx;
-    state.tabs.push({ id: newId, label: '' + (state.nextIdx + 1) });
+    const tab = { id: newId, label: '' + (state.nextIdx + 1) };
+    if (opts && opts.aiKey) {
+      tab.aiKey = opts.aiKey;
+      tab.aiLabel = opts.aiLabel || opts.aiKey;
+    }
+    if (opts && opts.prepend) {
+      state.tabs.unshift(tab);
+    } else {
+      state.tabs.push(tab);
+    }
     state.nextIdx++;
     state.activeTab = newId;
     renderTerminalTabsBar(project);
     await mountTerminal(project, newId);
+    if (opts && opts.command) {
+      // Small delay to let the PTY initialize before sending the command
+      setTimeout(() => { window.api.writeTerminal(newId, opts.command + '\n'); }, 300);
+    }
+    return newId;
   }
 
   async function closeTerminalTab(project, terminalId) {

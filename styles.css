@@ -76,6 +76,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .pib-restart { color: var(--yellow) !important; font-size: 14px; }
 .pib-open { color: var(--blue) !important; }
 .pib-terminal { color: #fff !important; font-family: 'SF Mono', Monaco, monospace; font-size: 10px; font-weight: 700; }
+.pib-ai { padding: 3px; }
+.pib-ai svg { width: 14px; height: 14px; display: block; }
 .project-item-cmd { font-size: 10px; color: var(--text-dim); margin-top: 2px; font-family: 'SF Mono', Monaco, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.15s; }
 .project-item.active .project-item-cmd { color: rgba(255,255,255,0.7); }
 .git-badge { font-size: 9px; padding: 1px 6px; border-radius: 10px; background: var(--surface2); color: var(--text-dim); font-family: 'SF Mono', Monaco, monospace; font-weight: 400; white-space: nowrap; margin-right: 4px; }
@@ -286,6 +288,32 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .term-tab-close:hover { opacity: 1; color: var(--red); }
 .term-tab-add { color: var(--text-dim); font-size: 13px; padding: 4px 8px; }
 .term-tab-add:hover { color: var(--green); background: rgba(255,255,255,0.08); }
+
+/* AI session terminal tabs */
+.term-tab-ai { background: rgba(108, 92, 231, 0.12); border-bottom: 2px solid var(--accent); }
+.term-tab-ai.active { background: rgba(108, 92, 231, 0.22); border-bottom-color: var(--accent); }
+.term-tab-ai:hover { background: rgba(108, 92, 231, 0.18); }
+.term-tab-ai-logo { display: inline-flex; align-items: center; }
+.term-tab-ai-logo svg { width: 14px; height: 14px; }
+
+/* AI button & logo */
+.btn-ai { display: flex; align-items: center; gap: 6px; }
+.ai-tool-logo { display: inline-flex; align-items: center; flex-shrink: 0; }
+.ai-tool-logo svg { width: 16px; height: 16px; display: block; }
+
+/* AI custom select */
+.ai-select { position: relative; width: 100%; }
+.ai-select-display { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 13px; cursor: pointer; }
+.ai-select-display:hover { border-color: var(--text-dim); }
+.ai-select-text { flex: 1; display: flex; align-items: center; gap: 8px; }
+.ai-select-text .ai-tool-logo svg { width: 18px; height: 18px; }
+.ai-select-arrow { color: var(--text-dim); font-size: 10px; }
+.ai-select-options { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgba(0,0,0,0.35); z-index: 200; padding: 4px; max-height: 260px; overflow-y: auto; }
+.ai-select.open .ai-select-options { display: block; }
+.ai-select-option { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; color: var(--text); }
+.ai-select-option:hover { background: rgba(255,255,255,0.06); }
+.ai-select-option.selected { background: rgba(108, 92, 231, 0.15); }
+.ai-select-option .ai-tool-logo svg { width: 18px; height: 18px; }
 
 /* Terminal search bar */
 .terminal-search-bar { display: flex; align-items: center; gap: 6px; padding: 5px 12px; background: #1e1e2e; margin: 0; border-bottom: 1px solid var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }

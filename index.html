@@ -286,6 +286,23 @@
       <div id="settings-update-status" class="form-hint"></div>
     </div>
     <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
+      <label>AI Coding Assistant</label>
+      <div class="ai-select" id="settings-ai-tool">
+        <div class="ai-select-display" id="ai-select-display"><span class="ai-select-text">None</span><span class="ai-select-arrow">&#9662;</span></div>
+        <div class="ai-select-options" id="ai-select-options"></div>
+      </div>
+      <div id="settings-ai-cmd-wrap" style="display:none;margin-top:8px;">
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:5px;">Command</label>
+        <input type="text" id="settings-ai-cmd" placeholder="e.g. claude --auto" style="width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:'SF Mono',Monaco,monospace;">
+        <div class="form-hint">Customize the command and flags used to launch the session.</div>
+      </div>
+      <div id="settings-ai-custom-name-wrap" style="display:none;margin-top:8px;">
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:5px;">Display Name</label>
+        <input type="text" id="ai-custom-name" placeholder="My AI Tool" style="width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;">
+      </div>
+      <div class="form-hint" style="margin-top:6px;">Adds a quick-launch button to your project actions.</div>
+    </div>
+    <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
       <label>Data</label>
       <div style="display:flex;gap:8px;">
         <button class="btn-browse" id="settings-export" style="flex:1;text-align:center;">Export Config</button>

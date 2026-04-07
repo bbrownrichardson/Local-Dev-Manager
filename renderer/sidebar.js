@@ -25,6 +25,7 @@
                 : '<button class="pib pib-start" data-action="start" title="Start">&#9654;</button>') : '') + '\
               ' + (p.url && isRunning ? '<button class="pib pib-open" data-action="open" title="Open in browser">\u2197</button>' : '') + '\
               <button class="pib pib-terminal" data-action="terminal" title="Terminal">$</button>\
+              ' + (S.aiTool ? '<button class="pib pib-ai" data-action="ai" title="Launch ' + esc((App.aiTools[S.aiTool] || {}).name || S.aiCustomTool.name || 'AI') + '">' + ((App.aiTools[S.aiTool] || {}).logo || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg>') + '</button>' : '') + '\
             </div>\
           </div>\
           ' + (gitHtml ? '<div class="project-item-branch">' + gitHtml + '</div>' : '') + '\
@@ -56,6 +57,10 @@
             S.currentView = 'projects'; App.app.updateView(); App.app.selectProject(p.id);
             S.activeDetailTab = 'terminal';
             App.app.renderDetail();
+          }
+          else if (action === 'ai' && S.aiTool) {
+            S.currentView = 'projects'; App.app.updateView(); App.app.selectProject(p.id);
+            App.app.launchAiSession(p, S.aiTool);
           }
         });
       });
