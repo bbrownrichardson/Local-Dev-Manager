@@ -9,6 +9,10 @@
   async function init() {
     S.projects = await window.api.getProjects();
     S.profiles = await window.api.getProfiles();
+    var appSettings = await window.api.getSettings();
+    S.aiTool = appSettings.aiTool || '';
+    S.aiCmdOverrides = appSettings.aiCmdOverrides || {};
+    S.aiCustomTool = appSettings.aiCustomTool || { name: '' };
     const runningIds = await window.api.getRunningIds();
     runningIds.forEach(id => { S.statuses[id] = 'running'; });
     App.sidebar.renderSidebar();
@@ -43,6 +47,21 @@
   }
 
   function selectProject(id) { S.selectedId = id; App.sidebar.renderSidebar(); renderDetail(); }
+
+  async function launchAiSession(project, aiKey) {
+    var tool = App.aiTools[aiKey];
+    var defaultCmd = tool ? tool.command : '';
+    var command = (S.aiCmdOverrides && S.aiCmdOverrides[aiKey]) || defaultCmd;
+    var label = tool ? tool.name : aiKey;
+    if (aiKey === 'custom') {
+      label = S.aiCustomTool.name || 'Custom AI';
+      if (!command) return;
+    }
+    S.activeDetailTab = 'terminal';
+    renderDetail();
+    await new Promise(r => setTimeout(r, 100));
+    await App.terminal.addTerminalTab(project, { aiKey: aiKey, aiLabel: label, command: command, prepend: true });
+  }
 
   function renderDetailMeta() {
     const metaEl = document.getElementById('detail-meta');
@@ -82,6 +101,17 @@
           (hasCommand && isRunning ? '<button class="btn btn-restart" id="btn-restart">' + icons.restart + ' Restart</button>' : '') +
           '<div class="action-divider"></div>' +
           (p.url ? '<button class="btn btn-open" id="btn-open"' + (!isRunning ? ' disabled' : '') + '>' + icons.open + ' Open</button>' : '') +
+          (S.aiTool ? '<div class="action-divider"></div>' +
+          (function () {
+            var t = App.aiTools[S.aiTool];
+            var logo = t ? t.logo : '';
+            var name = t ? t.name : '';
+            if (S.aiTool === 'custom') {
+              name = S.aiCustomTool.name || 'Custom AI';
+              logo = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg>';
+            }
+            return '<button class="btn btn-ai" id="btn-ai"><span class="ai-tool-logo">' + logo + '</span> ' + esc(name) + '</button>';
+          })() : '') +
           '<div class="action-divider"></div>' +
           '<div class="btn-group">' +
             '<button class="btn" id="btn-edit-project">' + icons.edit + ' Edit</button>' +
@@ -212,6 +242,12 @@
 
     const btnOpen = document.getElementById('btn-open');
     if (btnOpen) btnOpen.addEventListener('click', () => window.api.openUrl(p.url));
+
+    // AI launch button
+    const btnAi = document.getElementById('btn-ai');
+    if (btnAi) {
+      btnAi.addEventListener('click', () => launchAiSession(p, S.aiTool));
+    }
 
     document.getElementById('btn-edit-project').addEventListener('click', () => App.modal.openModal(p));
     document.getElementById('btn-clone-project').addEventListener('click', () => App.modal.cloneProject(p));
@@ -422,6 +458,54 @@
     document.getElementById('settings-theme').value = settings.theme || 'dark';
     document.getElementById('settings-terminal-theme').value = settings.terminalTheme || 'system';
     document.getElementById('settings-notification-sound').checked = settings.notificationSound !== false;
+    // AI tool custom select
+    var currentAi = settings.aiTool || '';
+    var customTool = settings.aiCustomTool || { name: '', command: '' };
+    var aiSelectWrap = document.getElementById('settings-ai-tool');
+    var aiDisplay = document.getElementById('ai-select-display');
+    var aiOptions = document.getElementById('ai-select-options');
+    var allChoices = [{ key: '', name: 'None', logo: '' }]
+      .concat(Object.entries(App.aiTools).map(function (e) { return { key: e[0], name: e[1].name, logo: e[1].logo }; }))
+      .concat([{ key: 'custom', name: 'Custom...', logo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg>' }]);
+    var aiCmdOverrides = settings.aiCmdOverrides || {};
+    function setAiDisplay(key) {
+      var choice = allChoices.find(function (c) { return c.key === key; }) || allChoices[0];
+      document.getElementById('ai-select-display').querySelector('.ai-select-text').innerHTML =
+        (choice.logo ? '<span class="ai-tool-logo">' + choice.logo + '</span>' : '') + esc(choice.name);
+      var cmdWrap = document.getElementById('settings-ai-cmd-wrap');
+      var cmdInput = document.getElementById('settings-ai-cmd');
+      var nameWrap = document.getElementById('settings-ai-custom-name-wrap');
+      if (key && key !== '') {
+        cmdWrap.style.display = 'block';
+        var defaultCmd = App.aiTools[key] ? App.aiTools[key].command : '';
+        cmdInput.value = aiCmdOverrides[key] || defaultCmd;
+        cmdInput.placeholder = defaultCmd || 'e.g. my-tool --flag';
+        nameWrap.style.display = key === 'custom' ? 'block' : 'none';
+      } else {
+        cmdWrap.style.display = 'none';
+        nameWrap.style.display = 'none';
+      }
+    }
+    aiOptions.innerHTML = allChoices.map(function (c) {
+      return '<div class="ai-select-option' + (c.key === currentAi ? ' selected' : '') + '" data-value="' + c.key + '">' +
+        (c.logo ? '<span class="ai-tool-logo">' + c.logo + '</span>' : '') + esc(c.name) + '</div>';
+    }).join('');
+    aiSelectWrap._value = currentAi;
+    setAiDisplay(currentAi);
+    document.getElementById('ai-custom-name').value = customTool.name || '';
+    aiDisplay.onclick = function (e) { e.stopPropagation(); aiSelectWrap.classList.toggle('open'); };
+    aiOptions.onclick = function (e) {
+      var opt = e.target.closest('.ai-select-option');
+      if (!opt) return;
+      // Save current command override before switching
+      var prevKey = aiSelectWrap._value;
+      if (prevKey) aiCmdOverrides[prevKey] = document.getElementById('settings-ai-cmd').value;
+      aiSelectWrap._value = opt.dataset.value;
+      aiOptions.querySelectorAll('.ai-select-option').forEach(function (o) { o.classList.toggle('selected', o === opt); });
+      setAiDisplay(opt.dataset.value);
+      aiSelectWrap.classList.remove('open');
+    };
+    document.addEventListener('click', function () { aiSelectWrap.classList.remove('open'); });
     // Show app version
     window.api.getAppVersion().then(function (v) {
       var el = document.getElementById('settings-version');
@@ -442,14 +526,27 @@
     settings.theme = document.getElementById('settings-theme').value;
     settings.terminalTheme = document.getElementById('settings-terminal-theme').value;
     settings.notificationSound = document.getElementById('settings-notification-sound').checked;
+    settings.aiTool = document.getElementById('settings-ai-tool')._value || '';
+    // Save current command override
+    var savedOverrides = settings.aiCmdOverrides || {};
+    if (settings.aiTool) savedOverrides[settings.aiTool] = document.getElementById('settings-ai-cmd').value;
+    settings.aiCmdOverrides = savedOverrides;
+    settings.aiCustomTool = {
+      name: (document.getElementById('ai-custom-name') || {}).value || '',
+    };
+    S.aiTool = settings.aiTool;
+    S.aiCmdOverrides = settings.aiCmdOverrides;
+    S.aiCustomTool = settings.aiCustomTool;
     await window.api.saveSettings(settings);
     App.settings.applyTheme(settings.theme);
     S.terminalThemeSetting = settings.terminalTheme || 'system';
     App.terminal.applyTerminalTheme();
     document.getElementById('settings-modal').style.display = 'none';
+    renderDetail();
+    App.sidebar.renderSidebar();
   });
 
-  App.app = { init, selectProject, renderDetail, renderDetailMeta, renderTabControls, updateView, runHealthCheck, refreshGitStatuses, refreshResources };
+  App.app = { init, selectProject, renderDetail, renderDetailMeta, renderTabControls, updateView, runHealthCheck, refreshGitStatuses, refreshResources, launchAiSession };
 
   // ── Bootstrap ───────────────────────────────────────────────────
   init();
